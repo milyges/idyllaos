@@ -1,0 +1,12 @@
+diff -Naur ncurses-5.7.orig/config.sub ncurses-5.7/config.sub
+--- ncurses-5.7.orig/config.sub	2008-08-30 22:25:02.000000000 +0200
++++ ncurses-5.7/config.sub	2010-11-16 16:18:04.000000000 +0100
+@@ -1270,7 +1270,7 @@
+ 	      | -os2* | -vos* | -palmos* | -uclinux* | -nucleus* \
+ 	      | -morphos* | -superux* | -rtmk* | -rtmk-nova* | -windiss* \
+ 	      | -powermax* | -dnix* | -nx6 | -nx7 | -sei* | -dragonfly* \
+-	      | -skyos* | -haiku* | -rdos* | -toppers* | -drops*)
++	      | -skyos* | -haiku* | -rdos* | -toppers* | -drops* | -idyllaos*)
+ 	# Remember, each alternative MUST END IN *, to match a version number.
+ 		;;
+ 	-qnx*)

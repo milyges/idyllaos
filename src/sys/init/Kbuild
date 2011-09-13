@@ -1,0 +1,2 @@
+
+KERNEL_SOURCES += init/args.c init/kinit.c init/init.c

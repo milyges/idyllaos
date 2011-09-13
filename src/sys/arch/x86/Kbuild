@@ -1,0 +1,22 @@
+
+# Źródła specyficzne dla wersji 32b
+ARCH32_SOURCES:=entry_32.S page_32.c intr_32.S apboot_32.S elf_32.c
+
+# Źródła specyficzne dla wersji 64b
+ARCH64_SOURCES:=entry_64.S page_64.c intr_64.S apboot_64.S elf_64.c
+
+# Źródła wspólne dla obu wersji
+ARCH_SOURCES:=vga.c multiboot.c intr.c cpu.c pic.c gdt.c pit.c apic.c mptables.c \
+              exception.c irq.c ioapic.c ctx.c elf.c syscall.c stacktrace.c fpu.c \
+              v86.c
+
+# Dodatkowe flagi dla x86_64
+ifeq ($(ARCH),x86_64)
+ARCH_SOURCES += $(ARCH64_SOURCES)
+LDSCRIPT:=kernel_64.lds
+CFLAGS+=-mcmodel=large -D__X86_64__ -fno-asynchronous-unwind-tables
+ASFLAGS+=-mcmodel=large -D__X86_64__ -fno-asynchronous-unwind-tables
+else
+ARCH_SOURCES += $(ARCH32_SOURCES)
+LDSCRIPT:=kernel_32.lds
+endif

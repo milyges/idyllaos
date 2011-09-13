@@ -1,0 +1,5 @@
+
+KERNEL_SOURCES += kernel/vc.c kernel/kprintf.c kernel/panic.c kernel/sched.c kernel/thread.c \
+                  kernel/wait.c kernel/mutex.c kernel/sem.c kernel/vfs.c kernel/kld.c \
+                  kernel/bdev.c kernel/device.c kernel/proc.c kernel/exec.c kernel/syscall.c \
+                  kernel/cdev.c kernel/fork.c kernel/exit.c kernel/time.c kernel/pipe.c

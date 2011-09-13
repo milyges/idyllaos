@@ -1,0 +1,3 @@
+
+MOD_SOURCES=main.c chan.c pio.c patapi.c pata.c part.c
+TARGET=ata.ko

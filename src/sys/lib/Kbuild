@@ -1,0 +1,2 @@
+
+KERNEL_SOURCES += lib/string.c lib/printf.c

@@ -1,0 +1,57 @@
+/*
+ * Idylla Operating System
+ * Copyright (C) 2009-2010  Idylla Operating System Team
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+*/
+ENTRY(_start)
+OUTPUT_FORMAT("elf32-i386")
+OUTPUT_ARCH("i386")
+
+KERNEL_PHYS_ADDR = __CONFIG_KLOAD_ADDR;
+KERNEL_VIRT_ADDR = 0xC0000000 + KERNEL_PHYS_ADDR;
+KERNEL_BASE_ADDR = (KERNEL_VIRT_ADDR - KERNEL_PHYS_ADDR);
+PAGE_SIZE = 0x1000;
+
+SECTIONS
+{
+    . = KERNEL_VIRT_ADDR;
+
+    .text : AT(ADDR(.text) - KERNEL_BASE_ADDR)
+    {
+	_text = .;
+	*(.header)
+        *(.text)
+        *(.rodata*)
+	_etext = .;
+    }
+
+    .data ALIGN (PAGE_SIZE) : AT(ADDR(.data) - KERNEL_BASE_ADDR)
+    {
+	_data = .;
+        *(.data)
+	_edata = .;
+    }
+
+    .bss ALIGN (PAGE_SIZE) : AT(ADDR(.bss) - KERNEL_BASE_ADDR)
+    {
+        _bss = .;
+	*(.bss)
+	*(COMMON)
+	. = ALIGN(PAGE_SIZE);
+        _ebss = .;
+    }
+    _end = .;
+}

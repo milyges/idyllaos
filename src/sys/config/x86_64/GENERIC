@@ -1,0 +1,45 @@
+# Domyślny plik konfiguracyjny jądla dla procesorów x86
+
+# Model CPU (nie zmieniać)
+cpu x86_64
+
+# Nazwa konfiguracji
+name GENERIC
+
+# Adres fizyczny kernela (musi byc >= 1MB i zaokrąglony do rozmiaru strony)
+option KLOAD_ADDR  0x00100000
+#option KLOAD_ADDR  0x01000000
+
+# Rozmiar stosu kernela (najlepiej nie zmieniać)
+option KSTACK_SIZE 0x1000
+
+# Wsparcie aplikacji 32 bitowych
+option ENABLE_X86_SUPPORT
+
+# Obsługa LocalAPIC (wymagane do SMP)
+option ENABLE_APIC
+
+# Obsługa SMP
+option ENABLE_SMP
+
+# Ilość obsługiwanych CPU
+option CPUS_MAX    8
+
+# Obsługa I/O APIC
+option ENABLE_IOAPIC
+
+# Częstotliwość dla PIT
+option TIMER_HZ    100
+#option TIMER_HZ   250
+#option TIMER_HZ   500
+#option TIMER_HZ   1000
+
+# Włącz monitor v86
+option ENABLE_V86
+
+# Moduly do skompilowania
+module test
+module drivers/bus/pci
+module drivers/storage/ata
+module drivers/char/tty
+module fs/ext2

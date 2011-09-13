@@ -1,0 +1,3 @@
+
+KERNEL_SOURCES += mm/phys.c mm/heap.c mm/sma.c mm/kmem.c mm/vm_space.c mm/vm_pagefault.c \
+                  mm/vm_mmap.c mm/vm_mmap_anon.c mm/vm_mmap_vfs.c mm/vm_getpage.c

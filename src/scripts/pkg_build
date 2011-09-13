@@ -1,0 +1,43 @@
+#!/bin/bash
+
+# uzycie:
+# pkg_build [-h]
+# pkg_build [-v] [-o plik.pkg] [-i PKGINFO] katalog1 katalog2 plik3
+
+usage()
+{
+	echo "Usage: "
+	echo " $0 -h"
+	echo " $0 [-o output.pkg] [-i PKGINFO] [-f fakeroot] [-a arch] [directory...]"
+}
+
+while getopts "ho:i:a:f:" OPT
+do
+	case $OPT in
+		h) usage; exit 0 ;;
+		o) OUTPUT=$OPTARG ;;
+		i) PKGINFO=$OPTARG ;;
+		f) FAKEROOT=$OPTARG ;;
+	esac
+done
+
+shift $((OPTIND - 1))
+
+PKGINFO=${PKGINFO:-'PKGINFO'}
+FILES=${@:-'./'}
+ARCH=${ARCH:-${IDYLLAOS_ARCH}}
+FAKEROOT=${FAKEROOT:-'.'}
+OUTPUT=${OUTPUT:-'.'}
+
+if [ ! -r "${PKGINFO}" ]
+then
+	echo "PKGINFO file not found"
+	exit 1
+fi
+
+echo $FAKEROOT
+
+# Ładujemy plik PKGINFO
+source ${PKGINFO}
+
+echo "Building package ${NAME}.${ARCH}.tgz..."

@@ -1,0 +1,3 @@
+
+MOD_SOURCES=tty.c kbd.c
+TARGET=tty.ko
