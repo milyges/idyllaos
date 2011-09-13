@@ -1,0 +1,121 @@
+diff -Naur binutils-2.20.1.orig/bfd/config.bfd binutils-2.20.1/bfd/config.bfd
+--- binutils-2.20.1.orig/bfd/config.bfd	2009-08-06 19:38:00.000000000 +0200
++++ binutils-2.20.1/bfd/config.bfd	2010-05-11 13:38:14.000000000 +0200
+@@ -625,6 +625,11 @@
+     targ_selvecs="bfd_elf32_i386_freebsd_vec i386coff_vec i386pei_vec x86_64pei_vec bfd_elf32_i386_vec bfd_elf64_x86_64_vec bfd_elf64_l1om_vec bfd_elf64_l1om_freebsd_vec"
+     want64=true
+     ;;
++  x86_64-*-idyllaos*)
++    targ_defvec=bfd_elf64_x86_64_vec
++    targ_selvecs=bfd_elf32_i386_vec
++    want64=true
++    ;;
+   x86_64-*-netbsd* | x86_64-*-openbsd*)
+     targ_defvec=bfd_elf64_x86_64_vec
+     targ_selvecs="bfd_elf32_i386_vec i386netbsd_vec i386coff_vec i386pei_vec x86_64pei_vec bfd_elf64_l1om_vec"
+@@ -673,6 +677,9 @@
+     targ_defvec=bfd_elf32_i386_vec
+     targ_selvecs="i386pe_vec i386pei_vec"
+     ;;
++  i[3-7]86-*idyllaos*)
++    targ_defvec=bfd_elf32_i386_vec
++    ;;
+   i[3-7]86-*-interix*)
+     targ_defvec=i386pei_vec
+     targ_selvecs="i386pe_vec"
+diff -Naur binutils-2.20.1.orig/config.sub binutils-2.20.1/config.sub
+--- binutils-2.20.1.orig/config.sub	2009-08-17 06:10:29.000000000 +0200
++++ binutils-2.20.1/config.sub	2010-05-11 13:38:37.000000000 +0200
+@@ -1293,7 +1293,7 @@
+ 	      | -os2* | -vos* | -palmos* | -uclinux* | -nucleus* \
+ 	      | -morphos* | -superux* | -rtmk* | -rtmk-nova* | -windiss* \
+ 	      | -powermax* | -dnix* | -nx6 | -nx7 | -sei* | -dragonfly* \
+-	      | -skyos* | -haiku* | -rdos* | -toppers* | -drops*)
++	      | -skyos* | -haiku* | -rdos* | -toppers* | -drops* | -idyllaos*)
+ 	# Remember, each alternative MUST END IN *, to match a version number.
+ 		;;
+ 	-qnx*)
+diff -Naur binutils-2.20.1.orig/gas/configure.tgt binutils-2.20.1/gas/configure.tgt
+--- binutils-2.20.1.orig/gas/configure.tgt	2009-09-09 10:13:28.000000000 +0200
++++ binutils-2.20.1/gas/configure.tgt	2010-05-11 13:39:12.000000000 +0200
+@@ -183,6 +183,7 @@
+   i386-*-beos*)				fmt=elf ;;
+   i386-*-coff)				fmt=coff ;;
+   i386-*-elf)				fmt=elf ;;
++  i386-*-idyllaos)			fmt=elf ;;
+   i386-*-kaos*)				fmt=elf ;;
+   i386-*-bsd*)				fmt=aout em=386bsd ;;
+   i386-*-netbsd0.8)			fmt=aout em=386bsd ;;
+diff -Naur binutils-2.20.1.orig/ld/configure.tgt binutils-2.20.1/ld/configure.tgt
+--- binutils-2.20.1.orig/ld/configure.tgt	2009-08-06 19:38:03.000000000 +0200
++++ binutils-2.20.1/ld/configure.tgt	2010-05-11 13:40:16.000000000 +0200
+@@ -244,6 +244,10 @@
+ x86_64-*-elf*)		targ_emul=elf_x86_64
+ 			targ_extra_emuls="elf_i386 elf_l1om"
+ 			;;
++i[3-7]86-*-idyllaos)    targ_emul=idyllaos_i386;;
++x86_64-*-idyllaos*)	targ_emul=idyllaos_x86_64
++			targ_extra_emuls=idyllaos_i386
++			;;
+ i[3-7]86-*-kaos*)	targ_emul=elf_i386 ;;
+ i[3-7]86-*-freebsdaout* | i[3-7]86-*-freebsd[12].* | i[3-7]86-*-freebsd[12])
+ 			targ_emul=i386bsd ;;
+diff -Naur binutils-2.20.1.orig/ld/emulparams/idyllaos_i386.sh binutils-2.20.1/ld/emulparams/idyllaos_i386.sh
+--- binutils-2.20.1.orig/ld/emulparams/idyllaos_i386.sh	1970-01-01 01:00:00.000000000 +0100
++++ binutils-2.20.1/ld/emulparams/idyllaos_i386.sh	2010-05-11 13:41:03.000000000 +0200
+@@ -0,0 +1,13 @@
++SCRIPT_NAME=elf
++OUTPUT_FORMAT="elf32-i386"
++TEXT_START_ADDR=0x00400000
++MAXPAGESIZE="CONSTANT (MAXPAGESIZE)"
++COMMONPAGESIZE="CONSTANT (COMMONPAGESIZE)"
++ARCH=i386
++MACHINE=
++NOP=0x90909090
++TEMPLATE_NAME=elf32
++GENERATE_SHLIB_SCRIPT=yes
++GENERATE_PIE_SCRIPT=yes
++NO_SMALL_DATA=yes
++SEPARATE_GOTPLT=12 
+diff -Naur binutils-2.20.1.orig/ld/emulparams/idyllaos_x86_64.sh binutils-2.20.1/ld/emulparams/idyllaos_x86_64.sh
+--- binutils-2.20.1.orig/ld/emulparams/idyllaos_x86_64.sh	1970-01-01 01:00:00.000000000 +0100
++++ binutils-2.20.1/ld/emulparams/idyllaos_x86_64.sh	2010-05-11 13:41:29.000000000 +0200
+@@ -0,0 +1,22 @@
++SCRIPT_NAME=elf
++ELFSIZE=64
++OUTPUT_FORMAT="elf64-x86-64"
++TEXT_START_ADDR=0x00400000
++MAXPAGESIZE="CONSTANT (MAXPAGESIZE)"
++COMMONPAGESIZE="CONSTANT (COMMONPAGESIZE)"
++ARCH="i386:x86-64"
++MACHINE=
++NOP=0x90909090
++TEMPLATE_NAME=elf32
++GENERATE_SHLIB_SCRIPT=yes
++GENERATE_PIE_SCRIPT=yes
++NO_SMALL_DATA=yes
++LARGE_SECTIONS=yes
++SEPARATE_GOTPLT=24
++
++if [ "x${host}" = "x${target}" ]; then
++  case " $EMULATION_LIBPATH " in
++    *" ${EMULATION_NAME} "*)
++      NATIVE=yes
++  esac
++fi
+diff -Naur binutils-2.20.1.orig/ld/Makefile.in binutils-2.20.1/ld/Makefile.in
+--- binutils-2.20.1.orig/ld/Makefile.in	2010-03-03 15:06:21.000000000 +0100
++++ binutils-2.20.1/ld/Makefile.in	2010-05-11 13:42:38.000000000 +0200
+@@ -2483,6 +2483,12 @@
+   $(srcdir)/emulparams/vxworks.sh $(srcdir)/emultempl/vxworks.em \
+   $(ELF_DEPS) $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
+ 	${GENSCRIPTS} elf_i386_vxworks "$(tdir_elf_i386_vxworks)"
++eidyllaos_i386.c: $(srcdir)/emulparams/idyllaos_i386.sh \
++  $(ELF_DEPS) $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
++	${GENSCRIPTS} idyllaos_i386 "$(tdir_idyllaos_i386)"
++eidyllaos_x86_64.c: $(srcdir)/emulparams/idyllaos_x86_64.sh \
++  $(ELF_DEPS) $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
++	${GENSCRIPTS} idyllaos_x86_64 "$(tdir_idyllaos_x86_64)"
+ eelf_s390.c: $(srcdir)/emulparams/elf_s390.sh \
+   $(ELF_DEPS) $(srcdir)/scripttempl/elf.sc ${GEN_DEPENDS}
+ 	${GENSCRIPTS} elf_s390 "$(tdir_elf_s390)"
