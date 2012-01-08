@@ -25,6 +25,7 @@
 #include <kernel/kprintf.h>
 #include <kernel/debug.h>
 #include <kernel/vfs.h>
+#include <kernel/hostname.h>
 #include <mm/heap.h>
 #include <mm/vmm.h>
 #include <lib/string.h>
@@ -398,16 +399,36 @@ static int _sys_uname(struct utsname * buf)
 	extern char __release[];
 	extern char __machine[];
 	extern char __version[];
-
+	extern char __hostname[];
+	
 	if (!IS_IN_USERMEM(buf))
 		return -EFAULT;
 
 	strcpy(buf->sysname, __osname);
-	strcpy(buf->nodename, "localhost"); /* TODO: Obsluga nazwy hosta */
+	strcpy(buf->nodename, __hostname); 
 	strcpy(buf->release, __release);
 	strcpy(buf->version, __version);
 	strcpy(buf->machine, __machine);
 	return 0;
+}
+
+static int _sys_gethostname(char * buf, size_t bufsz)
+{
+	if (!IS_IN_USERMEM(buf))
+		return -EFAULT;
+	
+	return sys_gethostname(buf, bufsz);
+}
+
+static int _sys_sethostname(char * buf)
+{
+	if (!IS_IN_USERMEM(buf))
+		return -EFAULT;
+		
+	/*if (!IS_ROOT(SCHED->current->proc))
+		return -EPERM;*/
+	 
+	return sys_sethostname(buf);
 }
 
 void * __syscall_table[] =
@@ -464,7 +485,9 @@ void * __syscall_table[] =
 	&_sys_vfork,
 	&_sys_mount,
 	&_sys_umount,
-	&_sys_uname
+	&_sys_uname,
+	&_sys_gethostname,
+	&_sys_sethostname
 };
 
 const int __syscall_table_size = sizeof(__syscall_table) / sizeof(void *);

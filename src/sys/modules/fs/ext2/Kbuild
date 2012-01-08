@@ -1,3 +1,3 @@
 
-MOD_SOURCES=ext2.c super.c inode.c ialloc.c
+MOD_SOURCES=ext2.c super.c inode.c ialloc.c balloc.c
 TARGET=ext2.ko

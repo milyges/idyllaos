@@ -43,6 +43,7 @@ void ctx_fork(struct ctx * newctx, struct intr_stack * stack)
 {
 	reg_t * ptr;
 
+	spinlock_init(&newctx->lock);
 	newctx->stack = kalloc(__CONFIG_KSTACK_SIZE);
 	ptr = (reg_t *)(newctx->stack + __CONFIG_KSTACK_SIZE);
 	//kprintf("newctx->stack = %x\n", newctx->stack);
@@ -73,7 +74,6 @@ void ctx_fork(struct ctx * newctx, struct intr_stack * stack)
 #endif /* __X86_64__ */
 
 	newctx->stackptr = ptr;
-
 }
 
 void ctx_init(struct ctx * ctx, void * entry)

@@ -114,11 +114,10 @@ void schedule(void)
 	/* Jeżeli musimy, zmieniamy proces */
 	if (old != SCHED->current)
 	{
-
 		SCHED->ctxsw++; /* Aktualizacja statystyk */
 
 		/* Przestrzeń adresową zmieniamy tylko przy zmianie procesu */
-		//if(old->proc->vmspace != SCHED->current->proc->vmspace)
+		if(old->proc->vmspace != SCHED->current->proc->vmspace)
 			vm_space_switch(SCHED->current->proc->vmspace);
 
 		/* Zmieniamy kontekst */

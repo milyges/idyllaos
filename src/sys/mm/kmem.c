@@ -63,3 +63,8 @@ void kmem_unmap_page(void * ptr)
 	paging_unmap_page((addr_t)ptr, NULL);
 	kmem_free(ptr, PAGE_SIZE);
 }
+
+void kmem_copy_page(void * dest, void * src, size_t len)
+{
+	
+}

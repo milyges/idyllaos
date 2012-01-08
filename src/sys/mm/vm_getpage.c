@@ -44,7 +44,7 @@ struct vm_page * vm_copy_page(struct vm_mapping * mapping, struct vm_page * oldp
 	   d) Odmapowywujemy z pamięci tymczasowej
 	*/
 
-	//kprintf("vm_copy_page(): oldpage=%x, offset=%x\n", oldpage->address, offset);
+	//kprintf("vm_copy_page(): oldpage=0x%x, offset=%x\n", oldpage->address, offset);
 	page = kalloc(sizeof(struct vm_page));
 	list_init(&page->list);
 	atomic_set(&page->refs, 1);
@@ -58,6 +58,8 @@ struct vm_page * vm_copy_page(struct vm_mapping * mapping, struct vm_page * oldp
 
 	buf = kmem_map_page(page->address);
 	//kprintf("buf=%x\n", buf);
+	/* Jeżeli stara strona nie jest zamapowana */
+	paging_map_page(mapping->block->start + offset, oldpage->address, PG_FLAG_PRESENT, CPU->vmspace->dataptr);
 	memcpy(buf, (void *)(mapping->block->start + offset), PAGE_SIZE);
 	kmem_unmap_page(buf);
 
@@ -85,8 +87,6 @@ int vm_getpage(struct vm_mapping * mapping, off_t offset, unsigned rw)
 		kprintf("getpage: write in read-only memory!\n");
 		return -1;
 	}
-
-	//mutex_lock(&CPU->vmspace->mutex);
 
 	//mutex_lock(&region->mutex);
 	page = region->pages[pageidx];
@@ -121,7 +121,6 @@ int vm_getpage(struct vm_mapping * mapping, off_t offset, unsigned rw)
 
 	paging_map_page(mapping->block->start + offset, page->address, page_flags, CPU->vmspace->dataptr);
 
-	//mutex_unlock(&CPU->vmspace->mutex);
 	//kprintf("getpage exit\n");
 	return 0;
 }

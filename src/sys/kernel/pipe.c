@@ -45,13 +45,16 @@ struct pipe
 static int pipe_open(struct vnode * vnode)
 {
 	struct pipe * pipe;
-
 	pipe = kalloc(sizeof(struct pipe));
 	memset(pipe, 0, sizeof(struct pipe));
 	spinlock_init(&pipe->lock);
 	wait_init(&pipe->rd_wait);
 	wait_init(&pipe->wr_wait);
+	vnode->data = pipe;
 
+	//kprintf("pipe_open(%x)\n", vnode);
+	//kprintf("pipe=%x\n", pipe);
+	
 	vnode->mode = S_IFIFO | 0666;
 	vnode->nlink = 1;
 	vnode->size = PIPE_SIZE;
@@ -60,15 +63,16 @@ static int pipe_open(struct vnode * vnode)
 	vnode->dev = 0xFF;
 	vnode->blocks = PIPE_SIZE / 512;
 	vnode->block_size = 512;
-	vnode->rdev = 0;
+	vnode->rdev = 0;	
 	vnode->data = pipe;
-	kprintf("pipe_open()");
 	return 0;
 }
 
 static int pipe_close(struct vnode * vnode)
 {
-	kprintf("pipe_close()");
+	struct pipe * pipe = vnode->data;	
+	kfree(pipe);
+	
 	return 0;
 }
 
@@ -85,9 +89,11 @@ static ssize_t pipe_read(struct vnode * vnode, void * buf, size_t len, loff_t of
 		if (pipe->in_ptr == pipe->out_ptr)
 		{
 			/* Sprawdz czy zyje pisarz */
-			if (atomic_get(&vnode->refcount) < 2)
+			if ((atomic_get(&vnode->refcount) < 2) || (done > 0))
 				break;
-			/* Budzimy czytacza */
+			
+			/* Budzimy pisarza */
+			kprintf("pipe_read(): sleep, done=%d\n", done);
 			wait_wakeup(&pipe->wr_wait);
 			wait_sleep(&pipe->rd_wait, &pipe->lock);
 			continue;
@@ -106,11 +112,12 @@ static ssize_t pipe_write(struct vnode * vnode, void * buf, size_t len, loff_t o
 	struct pipe * pipe = vnode->data;
 	int done = 0, tmp;
 	uint8_t * ptr = buf;
-
+	
+	kprintf("pipe_write()\n");
+	
 	spinlock_lock(&pipe->lock);
 	while(done < len)
 	{
-
 		tmp = (pipe->in_ptr + 1) % PIPE_SIZE;
 
 		/* Kolejka pełna */
@@ -119,6 +126,7 @@ static ssize_t pipe_write(struct vnode * vnode, void * buf, size_t len, loff_t o
 			/* Sprawdz czy istnieje jaki kolwiek czytajacy */
 			if (atomic_get(&vnode->refcount) < 2)
 				break;
+			
 			/* Budzimy czytacza */
 			wait_wakeup(&pipe->rd_wait);
 			/* Usypiamy */
@@ -135,6 +143,7 @@ static ssize_t pipe_write(struct vnode * vnode, void * buf, size_t len, loff_t o
 	/* Budzimy czytacza */
 	wait_wakeup(&pipe->rd_wait);
 	spinlock_unlock(&pipe->lock);
+	
 	return done;
 }
 

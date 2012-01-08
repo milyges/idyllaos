@@ -34,18 +34,29 @@ int vm_pagefault(addr_t address, unsigned rw)
 {
 	struct vm_space * vmspace = CPU->vmspace;
 	struct sma_block * block;
-
+	int err;
+	
 	if (!vmspace)
 		return -1;
 
-	//kprintf("vm_pagefault: pid=%d, addr=%p, rw=%d\n", SCHED->current->proc->pid, address, rw);
+	if (SCHED->current->proc->pid > 3)
+	{		
+		//kprintf("vm_pagefault: pid=%d, addr=%p, rw=%d\n", SCHED->current->proc->pid, address, rw);
+		//kprintf("vmspace=%x\n", vmspace);
+		//mutex_dump(&vmspace->mutex);
+	}
+	
+	mutex_lock(&vmspace->mutex);
 
 	/* Pobieramy blok */
 	block = sma_getblock(vmspace->area, address);
 
 	/* Sprawdzamy czy mapowanie istnieje */
 	if ((!block) || ((block->flags & SMA_FLAGS_USED) != SMA_FLAGS_USED))
-		return -2;
-
-	return vm_getpage(block->dataptr, ROUND_DOWN(address - block->start, PAGE_SIZE), rw);
+		err = -2;
+	else
+		err = vm_getpage(block->dataptr, ROUND_DOWN(address - block->start, PAGE_SIZE), rw);
+	
+	mutex_unlock(&vmspace->mutex);
+	return err;
 }

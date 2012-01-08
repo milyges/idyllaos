@@ -17,6 +17,7 @@
  *
 */
 #include <arch/page.h>
+#include <arch/spinlock.h>
 #include <kernel/types.h>
 #include <kernel/panic.h>
 #include <kernel/kprintf.h>

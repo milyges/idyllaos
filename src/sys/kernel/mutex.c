@@ -18,6 +18,7 @@
 */
 #include <kernel/wait.h>
 #include <kernel/mutex.h>
+#include <kernel/debug.h>
 
 void mutex_init(struct mutex * mutex)
 {
@@ -43,5 +44,12 @@ void mutex_unlock(struct mutex * mutex)
 	spinlock_lock(&mutex->lock);
 	mutex->locked = 0;
 	wait_wakeup(&mutex->wait);
+	spinlock_unlock(&mutex->lock);
+}
+
+void mutex_dump(struct mutex * mutex)
+{
+	spinlock_lock(&mutex->lock);
+	kprintf("mutex 0x%X, locked = %d\n", mutex, mutex->locked);
 	spinlock_unlock(&mutex->lock);
 }

@@ -43,7 +43,18 @@ void show_help(void)
 
 void do_test(void)
 {
-
+	int fds[2];
+	char buf[10];
+	int err;
+	
+	err = pipe(fds);
+	printf("pipe() = %d\n", err);
+	
+	err = write(fds[1], "TEST", 5);
+	printf("write() = %d (%s)\n", err, err < 0 ? strerror(errno) : "OK");
+	
+	err = read(fds[0], buf, 5);
+	printf("read() = %d, buf = %s\n", err, buf);
 }
 
 void exec_cmdline(char * cmd)

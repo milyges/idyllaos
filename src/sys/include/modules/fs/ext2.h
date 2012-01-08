@@ -188,12 +188,17 @@ int inode_do_read(struct ext2_data * data, struct ext2_inode * inode, ino_t num)
 int inode_do_write(struct ext2_data * data, struct ext2_inode * inode, ino_t num);
 int inode_read(struct vnode * vnode);
 int inode_write(struct vnode * vnode);
-void inode_free(struct vnode * vnode);
-int inode_link(struct vnode * parent, char * name, ino_t ino_num, int type);
-int inode_unlink(struct vnode * parent, char * name);
+int inode_link(struct vnode * vnode, char * name, ino_t ino_num, struct ext2_inode * inode, int type);
+int inode_unlink(struct vnode * vnode, char * name);
 int32_t inode_read_content(struct vnode * vnode, void * buf, uint32_t blocks, uint32_t start);
 int32_t inode_write_content(struct vnode * vnode, void * buf, uint32_t blocks, uint32_t start);
 
+/* Z pliku ialloc.c */
 int inode_alloc(struct ext2_data * data, ino_t * ino, int group);
+int inode_free(struct ext2_data * data, ino_t ino);
+
+/* Z pliku balloc.c */
+int block_alloc(struct ext2_data * data, uint32_t * block, int group);
+int block_free(struct ext2_data * data, uint32_t block);
 
 #endif /* __MODULES_FS_EXT2_H */

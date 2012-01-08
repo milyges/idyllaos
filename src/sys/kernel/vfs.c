@@ -628,7 +628,7 @@ ssize_t sys_read(int fd, void * buf, size_t len, struct proc * proc)
 {
 	ssize_t err;
 	struct file * file;
-
+	
 	/* Check file descriptor */
 	if ((fd < 0) || (fd >= OPEN_MAX) || (!proc->filedes[fd]))
 		return -EBADF;
@@ -641,6 +641,14 @@ ssize_t sys_read(int fd, void * buf, size_t len, struct proc * proc)
 
 	if (S_ISCHR(file->vnode->mode))
 		err = cdev_read(file->vnode->rdev, buf, len);
+	else if (S_ISBLK(file->vnode->mode))
+	{
+		/* Dla urządzeń blokowych potrzebna jest warstwa,
+		 * która zamieni żądania w bajtach na bloki */
+		err = -ENOSYS;
+	}
+	else if (S_ISDIR(file->vnode->mode))
+		err = -EISDIR;
 	else if (file->vnode->ops->read)
 		err = file->vnode->ops->read(file->vnode, buf, len, file->pos);
 	else
@@ -677,6 +685,14 @@ ssize_t sys_write(int fd, void * buf, size_t len, struct proc * proc)
 
 	if (S_ISCHR(file->vnode->mode))
 		err = cdev_write(file->vnode->rdev, buf, len);
+	else if (S_ISBLK(file->vnode->mode))
+	{
+		/* Dla urządzeń blokowych potrzebna jest warstwa,
+		 * która zamieni żądania w bajtach na bloki */
+		err = -ENOSYS;
+	}
+	else if (S_ISDIR(file->vnode->mode))
+		err = -EISDIR;
 	else if (file->vnode->ops->write)
 	{
 		/* Sprawdzamy czy system plikow nie jest tylko do odczytu */
@@ -1209,28 +1225,26 @@ int sys_pipe(int fds[2], struct proc * proc)
 	struct vnode * vnode;
 	extern struct mountpoint __pipefs_mount;
 
-	vnode = vnode_new(&__pipefs_mount, 0);
+	vnode = vnode_new(&__pipefs_mount, proc->pid);
 	if (!vnode)
 		return -ENOMEM;
-
 	/* Tworzymy pliki i deskryptory plikow */
 	fdr = kalloc(sizeof(struct filedes));
 	fdr->flags = 0;
 	fdr->file = kalloc(sizeof(struct file));
 	mutex_init(&fdr->file->mutex);
-	atomic_set(&fdr->file->refs, 1);
-	VNODE_HOLD(vnode);
+	atomic_set(&fdr->file->refs, 1);	
 	fdr->file->vnode = vnode;
  	fdr->file->flags = 0;
 	fdr->file->mode = O_RDONLY;
 	fdr->file->pos = 0;
 
+	VNODE_HOLD(vnode);
 	fdw = kalloc(sizeof(struct filedes));
 	fdw->flags = 0;
 	fdw->file = kalloc(sizeof(struct file));
-	mutex_init(&fdr->file->mutex);
-	atomic_set(&fdr->file->refs, 1);
-	VNODE_HOLD(vnode);
+	mutex_init(&fdw->file->mutex);
+	atomic_set(&fdw->file->refs, 1);
 	fdw->file->vnode = vnode;
  	fdw->file->flags = 0;
 	fdw->file->mode = O_WRONLY;
@@ -1260,7 +1274,7 @@ int sys_pipe(int fds[2], struct proc * proc)
 		}
 	}
 
-	if (i != OPEN_MAX)
+	if (i < OPEN_MAX)
 		return 0;
 
 	proc->filedes[fds[0]] = NULL;
@@ -1274,6 +1288,7 @@ err:
 	kfree(fdr);
 	kfree(fdw);
 	vnode_free(vnode);
+
 	return -EMFILE;
 }
 

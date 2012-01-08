@@ -82,6 +82,8 @@ extern "C" {
 
 #define SYS_UMOUNT        51
 #define SYS_UNAME         52
+#define SYS_GETHOSTNAME   53
+#define SYS_SETHOSTNAME   54
 
 #ifdef __cplusplus
 }

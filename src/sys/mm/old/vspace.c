@@ -87,6 +87,8 @@ int vspace_clone(struct vspace ** dest, struct vspace * src)
 		if (err != 0)
 		{
 			/* TODO: Zwolnij pamięć */
+			TODO("vspace_clone(): failed");
+			mutex_unlock(&src->mutex);
 			return err;
 		}
 	}

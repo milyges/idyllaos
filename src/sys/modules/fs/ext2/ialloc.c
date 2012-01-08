@@ -21,6 +21,7 @@
 #include <kernel/kprintf.h>
 #include <kernel/module.h>
 #include <kernel/device.h>
+#include <kernel/debug.h>
 #include <kernel/vfs.h>
 #include <mm/heap.h>
 #include <modules/fs/ext2.h>
@@ -63,7 +64,20 @@ int inode_alloc(struct ext2_data * data, ino_t * ino, int group)
 {
 	int err, i, j;
 	unsigned long * buf;
-
+	uint32_t free_inodes = 0;
+	
+	if (group < 0)
+	{
+		for(i = 0; i < data->groups_count; i++)
+		{
+			if (data->groups[i].bg_free_inodes_count > free_inodes)
+			{
+				free_inodes = data->groups[i].bg_free_inodes_count;
+				group = i;
+			}
+		}
+	}
+	
 	/* Blokujemy daną grupę */
 	EXT2_GROUP_LOCK(data, group);
 
@@ -105,6 +119,42 @@ int inode_alloc(struct ext2_data * data, ino_t * ino, int group)
 		/* TODO: Jeżeli MS_SYNC to zapisz tez grupy i sb */
 	}
 
+	kfree(buf);
+end:
+	EXT2_GROUP_UNLOCK(data, group);
+	return err;
+}
+
+int inode_free(struct ext2_data * data, ino_t ino)
+{
+	int group, err, i, j;
+	unsigned long * buf;
+	group = EXT2_GET_INODE_GROUP(data, ino);
+	
+	/* Blokujemy daną grupę */
+	EXT2_GROUP_LOCK(data, group);
+	
+	/* Ładujemy bitmape blokow do pamieci */
+	buf = kalloc(data->blk_size);
+	err = inode_bitmap_read(data, buf, group);
+	if (err != 0)
+		goto end;
+	
+	/* Sprawdzamy czy i-node jest zajęty */
+	i = (ino - group * data->sb.s_inodes_per_group - 1) / (sizeof(unsigned long) * 8);
+	j = ino % (sizeof(unsigned long) * 8) - 1;
+	
+	err = 0;
+	if (test_bit(buf[i], j))
+	{
+		clear_bit(&buf[i], j);
+		data->groups[group].bg_free_inodes_count++;
+		data->sb.s_free_inodes_count++;
+		err = inode_bitmap_write(data, buf, group);
+		
+		/* TODO: Jeżeli MS_SYNC to zapisz tez grupy i sb */
+	}
+	
 	kfree(buf);
 end:
 	EXT2_GROUP_UNLOCK(data, group);

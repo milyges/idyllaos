@@ -23,15 +23,12 @@
 #include <stdio.h>
 #include <errno.h>
 
-void do_cat(int fd)
+int do_cat(int fd)
 {
 	char buf[1024];
 	ssize_t len;
 	struct stat stat;
 	fstat(fd, &stat);
-
-	if (S_ISDIR(stat.st_mode))
-		return;
 
 	do
 	{
@@ -41,11 +38,13 @@ void do_cat(int fd)
 		write(STDOUT_FILENO, buf, len);
 	}
 	while(len > 0);
+	
+	return len;
 }
 
 int main(int argc, char * argv[])
 {
-	int i, fd;
+	int i, fd, err;
 
 	if (argc < 2)
 	{
@@ -59,7 +58,9 @@ int main(int argc, char * argv[])
 			do_cat(STDIN_FILENO);
 		else if ((fd = open(argv[i], O_RDONLY)) >= 0)
 		{
-			do_cat(fd);
+			err = do_cat(fd);
+			if (err < 0)
+				fprintf(stderr, "%s: %s: %s\n", argv[0], argv[i], strerror(errno));
 			close(fd);
 		}
 		else

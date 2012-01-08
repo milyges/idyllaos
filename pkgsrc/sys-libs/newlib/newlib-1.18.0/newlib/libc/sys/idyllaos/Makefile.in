@@ -88,7 +88,9 @@ am__objects_1 = lib_a-chdir.$(OBJEXT) lib_a-close.$(OBJEXT) \
 	lib_a-getgrent.$(OBJEXT) lib_a-vfork.$(OBJEXT) \
 	lib_a-mount.$(OBJEXT) lib_a-umount.$(OBJEXT) \
 	lib_a-nanosleep.$(OBJEXT) lib_a-sigaction.$(OBJEXT) \
-	lib_a-uname.$(OBJEXT)
+	lib_a-uname.$(OBJEXT) lib_a-sigprocmask.$(OBJEXT) \
+	lib_a-setpgrp.$(OBJEXT) lib_a-getpgrp.$(OBJEXT) \
+	lib_a-sethostname.$(OBJEXT)
 @USE_LIBTOOL_FALSE@am_lib_a_OBJECTS = $(am__objects_1)
 lib_a_OBJECTS = $(am_lib_a_OBJECTS)
 LTLIBRARIES = $(noinst_LTLIBRARIES)
@@ -102,9 +104,13 @@ am__objects_2 = chdir.lo close.lo execve.lo _exit.lo fork.lo fstat.lo \
 	mkfifo.lo pipe.lo getppid.lo getuid.lo geteuid.lo getgid.lo \
 	getegid.lo alarm.lo setuid.lo setgid.lo getpwent.lo \
 	getgrent.lo vfork.lo mount.lo umount.lo nanosleep.lo \
-	sigaction.lo uname.lo
+	sigaction.lo uname.lo sigprocmask.lo setpgrp.lo getpgrp.lo \
+	sethostname.lo
 @USE_LIBTOOL_TRUE@am_libidyllaos_la_OBJECTS = $(am__objects_2)
 libidyllaos_la_OBJECTS = $(am_libidyllaos_la_OBJECTS)
+libidyllaos_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
+	$(libidyllaos_la_LDFLAGS) $(LDFLAGS) -o $@
 @USE_LIBTOOL_TRUE@am_libidyllaos_la_rpath =
 DEFAULT_INCLUDES = -I.@am__isrc@
 depcomp =
@@ -280,11 +286,12 @@ GENERAL_SOURCES = \
 	fcntl.c utime.c chown.c mkdir.c rmdir.c ftruncate.c ioctl.c termios.c select.c \
 	getlogin.c gethostname.c mknod.c mkfifo.c pipe.c getppid.c getuid.c geteuid.c getgid.c \
 	getegid.c alarm.c setuid.c setgid.c getpwent.c getgrent.c vfork.c mount.c umount.c \
-	nanosleep.c sigaction.c uname.c
+	nanosleep.c sigaction.c uname.c sigprocmask.c setpgrp.c getpgrp.c sethostname.c
 
 ADD_OBJS = \
 	$(IDYLLAOS_MACH_LIB)
 
+libidyllaos_la_LDFLAGS = -Xcompiler -nostdlib
 @USE_LIBTOOL_TRUE@noinst_LTLIBRARIES = libidyllaos.la
 @USE_LIBTOOL_TRUE@libidyllaos_la_SOURCES = $(GENERAL_SOURCES)
 @USE_LIBTOOL_TRUE@libidyllaos_la_LIBADD = $(ADD_OBJS)
@@ -356,7 +363,7 @@ clean-noinstLTLIBRARIES:
 	  rm -f "$${dir}/so_locations"; \
 	done
 libidyllaos.la: $(libidyllaos_la_OBJECTS) $(libidyllaos_la_DEPENDENCIES) 
-	$(LINK) $(am_libidyllaos_la_rpath) $(libidyllaos_la_OBJECTS) $(libidyllaos_la_LIBADD) $(LIBS)
+	$(libidyllaos_la_LINK) $(am_libidyllaos_la_rpath) $(libidyllaos_la_OBJECTS) $(libidyllaos_la_LIBADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -732,6 +739,30 @@ lib_a-uname.o: uname.c
 
 lib_a-uname.obj: uname.c
 	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-uname.obj `if test -f 'uname.c'; then $(CYGPATH_W) 'uname.c'; else $(CYGPATH_W) '$(srcdir)/uname.c'; fi`
+
+lib_a-sigprocmask.o: sigprocmask.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-sigprocmask.o `test -f 'sigprocmask.c' || echo '$(srcdir)/'`sigprocmask.c
+
+lib_a-sigprocmask.obj: sigprocmask.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-sigprocmask.obj `if test -f 'sigprocmask.c'; then $(CYGPATH_W) 'sigprocmask.c'; else $(CYGPATH_W) '$(srcdir)/sigprocmask.c'; fi`
+
+lib_a-setpgrp.o: setpgrp.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-setpgrp.o `test -f 'setpgrp.c' || echo '$(srcdir)/'`setpgrp.c
+
+lib_a-setpgrp.obj: setpgrp.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-setpgrp.obj `if test -f 'setpgrp.c'; then $(CYGPATH_W) 'setpgrp.c'; else $(CYGPATH_W) '$(srcdir)/setpgrp.c'; fi`
+
+lib_a-getpgrp.o: getpgrp.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-getpgrp.o `test -f 'getpgrp.c' || echo '$(srcdir)/'`getpgrp.c
+
+lib_a-getpgrp.obj: getpgrp.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-getpgrp.obj `if test -f 'getpgrp.c'; then $(CYGPATH_W) 'getpgrp.c'; else $(CYGPATH_W) '$(srcdir)/getpgrp.c'; fi`
+
+lib_a-sethostname.o: sethostname.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-sethostname.o `test -f 'sethostname.c' || echo '$(srcdir)/'`sethostname.c
+
+lib_a-sethostname.obj: sethostname.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-sethostname.obj `if test -f 'sethostname.c'; then $(CYGPATH_W) 'sethostname.c'; else $(CYGPATH_W) '$(srcdir)/sethostname.c'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo

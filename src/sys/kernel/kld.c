@@ -22,6 +22,7 @@
 #include <kernel/kprintf.h>
 #include <kernel/debug.h>
 #include <kernel/elf.h>
+#include <kernel/vfs.h>
 #include <mm/heap.h>
 #include <lib/string.h>
 #include <lib/errno.h>
@@ -158,7 +159,35 @@ int kld_load_image(void * image, char * argv[])
 
 int kld_load_file(char * path, char * argv[])
 {
-	return -ENOSYS;
+	void * image;
+	struct stat stat;
+	int fd, err;
+	
+	if ((fd = sys_open(path, O_RDONLY, 0, SCHED->current->proc)) < 0)
+		return fd;
+	
+	err = sys_fstat(fd, &stat, SCHED->current->proc);
+	if (err < 0)
+	{
+		sys_close(fd, SCHED->current->proc);
+		return err;
+	}
+	
+	image = kalloc(stat.st_size);
+	err = sys_read(fd, image, stat.st_size, SCHED->current->proc);
+	sys_close(fd, SCHED->current->proc);
+	
+	if (err < 0)
+	{
+		kfree(image);
+		return err;
+	}
+	
+	err = kld_load_image(image, argv);
+	if (err < 0)
+		kfree(image);
+	
+	return err;
 }
 
 int kld_unload(char * name)

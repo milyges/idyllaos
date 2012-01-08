@@ -127,8 +127,7 @@ struct sma_block * sma_alloc(struct sma_area * area, addr_t addr, size_t size, u
 	struct sma_block * block = NULL;
 	struct sma_block * newblock;
 	struct sma_block * newblock2;
-
-
+	
 	if (!addr)
 		goto nofixed;
 
@@ -237,7 +236,7 @@ doalloc:
 int sma_free(struct sma_area * area, addr_t start, size_t size)
 {
 	struct sma_block * block;
-	//struct sma_block * block2;
+	struct sma_block * block2;
 	addr_t addr = start;
 	addr_t len;
 
@@ -247,7 +246,7 @@ int sma_free(struct sma_area * area, addr_t start, size_t size)
 	    3. start i size określają kilka bloków
 	   Na początek sprawdźczy czy odnoszą się one rzeczywiście do zajętego obszaru pamięci oraz
 	   znajdźmy blok początkowy */
-
+	
 	/* Blokujemy obszar */
 	mutex_lock(&area->mutex);
 
@@ -261,6 +260,7 @@ int sma_free(struct sma_area * area, addr_t start, size_t size)
 
 		if ((list_t *)block == &area->used_list)
 		{
+			kprintf("sma_free(0x%X, 0x%X);\n", start, size);
 			TODO("block not found");
 			mutex_unlock(&area->mutex);
 			while(1);

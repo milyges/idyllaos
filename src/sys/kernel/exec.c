@@ -43,7 +43,7 @@ int sys_execve(char * path, char * argv[], char * envp[])
 	char ** uenvp;
 	char ** kargv;
 	char ** kenvp;
-
+	
 	/* Sprawdzamy prawa dostepu do pliku */
 	err = sys_access(path, 1, SCHED->current->proc);
 	if (err != 0)
@@ -63,8 +63,8 @@ int sys_execve(char * path, char * argv[], char * envp[])
 			return -EACCES;
 	}
 
-	/* TODO: Sprawdzamy czy plik jest skryptem */
-
+	/* TODO: Sprawdzamy czy plik jest skryptem */	
+	
 	/* Tworzymy przestrzen adresowa */
 	vmspace = vm_space_create();
 	if(!vmspace)

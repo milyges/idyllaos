@@ -62,7 +62,7 @@ build_gcc()
 	patch -d ${SRCDIR} -p1 < "${IDYLLAOS_PKGSRC}/dev-utils/gcc/gcc-${GCC_VERSION}.patch" && \
 	echo "Building sources" && \
 	cd ${BUILDDIR} && \
-	${SRCDIR}/configure --prefix=${PREFIX} --disable-nls --target=${IDYLLAOS_ARCH}-pc-idyllaos --disable-multilib --enable-languages=c,c++ && \
+	${SRCDIR}/configure --prefix=${PREFIX} --disable-nls --without-headers --with-newlib --target=${IDYLLAOS_ARCH}-pc-idyllaos --enable-languages=c,c++ --disable-multilib && \
 	make all-gcc all-target-libgcc && \
 	make install-gcc install-target-libgcc
 }
@@ -74,7 +74,7 @@ build_newlib()
 	mkdir -p ${BUILDDIR} && \
 	echo "Building sources" && \
 	cd ${BUILDDIR} && \
-	${SRCDIR}/configure --prefix=${PREFIX} --target=${IDYLLAOS_ARCH}-pc-idyllaos &&  \
+	${SRCDIR}/configure --prefix=${PREFIX} --target=${IDYLLAOS_ARCH}-pc-idyllaos --disable-nls && \
 	make all && \
 	make install
 }
@@ -95,7 +95,7 @@ build_ncurses()
 	${SRCDIR}/configure --prefix=${PREFIX} --disable-nls --prefix=${PREFIX}/${IDYLLAOS_ARCH}-pc-idyllaos \
 	--without-cxx --without-cxx-binding --datadir=/usr/share --sysconfdir=/etc --host=${IDYLLAOS_ARCH}-pc-idyllaos \
 	--build=${BUILD}
-	make all && \
+	make libs && \
 	make install.libs install.includes
 }
 

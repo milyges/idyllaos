@@ -336,11 +336,11 @@ case "${host}" in
     oext=lo
     lpfx=
     aext=la ;;
-  i[34567]86-pc-idyllaos*)
-    use_libtool=yes
-    oext=lo
-    lpfx=
-    aext=la ;;
+#  i[34567]86-pc-idyllaos*)
+#    use_libtool=yes
+#    oext=lo
+#    lpfx=
+#    aext=la ;;
   *) ;; #shared library not supported for ${host}
 esac
 

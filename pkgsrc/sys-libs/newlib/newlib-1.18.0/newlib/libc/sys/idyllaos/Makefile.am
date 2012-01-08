@@ -20,7 +20,7 @@ GENERAL_SOURCES = \
 	fcntl.c utime.c chown.c mkdir.c rmdir.c ftruncate.c ioctl.c termios.c select.c \
 	getlogin.c gethostname.c mknod.c mkfifo.c pipe.c getppid.c getuid.c geteuid.c getgid.c \
 	getegid.c alarm.c setuid.c setgid.c getpwent.c getgrent.c vfork.c mount.c umount.c \
-	nanosleep.c sigaction.c uname.c
+	nanosleep.c sigaction.c uname.c sigprocmask.c setpgrp.c getpgrp.c sethostname.c
 
 
 ADD_OBJS = \

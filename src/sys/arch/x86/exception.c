@@ -76,6 +76,7 @@ void do_exception(struct intr_stack * regs)
 	if (regs->intr_no == 14)
 	{
 		intr_enable();
+		//kprintf("eip=%x\n", regs->ip);
 		err = vm_pagefault(read_cr2(), regs->err_code & PGFAULT_WRITE);
 		intr_disable();
 

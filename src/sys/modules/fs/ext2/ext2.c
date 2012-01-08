@@ -51,7 +51,9 @@ static int ext2_close(struct vnode * vnode)
 	if ((vnode->mp->flags & MS_RDONLY) != MS_RDONLY)
 	{
 		if (!vnode->nlink)
-			inode_free(vnode);
+		{
+			
+		}
 		else
 			inode_write(vnode);
 	}
@@ -94,6 +96,7 @@ end:
 	return ino;
 }
 
+/* TODO: Optymalizacja odczytu/zapisu */
 static ssize_t ext2_read(struct vnode * vnode, void * buf, size_t len, loff_t offset)
 {
 	uint32_t start, count;
@@ -126,7 +129,28 @@ end:
 
 static ssize_t ext2_write(struct vnode * vnode, void * buf, size_t len, loff_t offset)
 {
-	return -ENOSYS;
+	uint32_t start, count;
+	void * tmpbuf;
+	int err;
+	
+	start = offset / vnode->block_size;
+	count = ROUND_UP(len, vnode->block_size) / vnode->block_size;
+	
+	tmpbuf = kalloc(count * vnode->block_size);
+	err = inode_read_content(vnode, tmpbuf, count, start);	
+	if (err < 0)
+		goto end;
+	memcpy((void *)(tmpbuf + (offset % vnode->block_size)), buf, len);
+	err = inode_write_content(vnode, tmpbuf, count, start);
+	if (err < 0)
+		goto end;
+	if (offset + len > vnode->size)
+		vnode->size = offset + len;
+	ext2_sync(vnode);
+	err = len;
+end:
+	kfree(tmpbuf);
+	return err;
 }
 
 int ext2_getdents(struct vnode * vnode, struct dirent * dirp, size_t len, loff_t * offset)
@@ -190,9 +214,7 @@ int ext2_creat(struct vnode * vnode, char * name, mode_t mode, uid_t uid, gid_t 
 	   - Jesli się nie da to wtedy w grupie która ma najwięcej wolnego miejsca */
 	err = inode_alloc(vnode->mp->data, &ino_num, EXT2_GET_INODE_GROUP(vnode->mp->data, vnode->ino));
 	if (err == -ENOSPC)
-	{
-		TODO("Alloc in other group");
-	}
+		err = inode_alloc(vnode->mp->data, &ino_num, -1);
 
 	if (err != 0)
 		goto end;
@@ -202,18 +224,14 @@ int ext2_creat(struct vnode * vnode, char * name, mode_t mode, uid_t uid, gid_t 
 	ino.i_mode = S_IFREG | (mode & 0777);
 	ino.i_uid = uid;
 	ino.i_gid = gid;
-	ino.i_links_count = 1;
+	ino.i_links_count = 0;
+	
 	/* TODO: Czasy */
 
-	/* Zapisujemy i-node na dysk */
-	err = inode_do_write(vnode->mp->data, &ino, ino_num);
+	err = inode_link(vnode, name, ino_num, &ino, EXT2_FT_REG_FILE);
 	if (err != 0)
-		goto end;
-
-	err = inode_link(vnode, name, ino_num, EXT2_FT_REG_FILE);
-	//if (err != 0)
-		//inode_do_free(vnode->mp->data, &ino, ino_num);
-
+ 		inode_free(vnode->mp->data, ino_num);
+	
 end:
 	return err;
 }

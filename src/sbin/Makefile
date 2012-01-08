@@ -1,5 +1,5 @@
 
 TOPDIR=..
-SUBDIRS=init mount
+SUBDIRS=init mount hostname
 
 include $(TOPDIR)/scripts/subdirs.mak

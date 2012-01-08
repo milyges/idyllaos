@@ -45,7 +45,7 @@ static pid_t do_fork(void * stack, int flags)
 	child_proc->gid = SCHED->current->proc->gid;
 	child_proc->euid = SCHED->current->proc->euid;
 	child_proc->egid = SCHED->current->proc->egid;
-
+	
 	/* Klonujemy przestrzen adresowa */
 	if ((flags & CLONE_VFORK) != CLONE_VFORK)
 	{
@@ -94,6 +94,7 @@ static pid_t do_fork(void * stack, int flags)
 	if (pid < 0)
 	{
 		/* TODO: Zwolnij pamięć */
+		TODO("free memory");
 		return pid;
 	}
 
@@ -122,8 +123,8 @@ static pid_t do_fork(void * stack, int flags)
 			schedule();
 			intr_restore(intr);
 		}
-	}
-
+	}	
+	
 	return pid;
 }
 

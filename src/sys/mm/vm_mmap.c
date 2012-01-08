@@ -58,13 +58,13 @@ int vm_mmap(void * start, size_t length, uint16_t flags, int fd, loff_t offset, 
 	if ((flags & MAP_ANONYMOUS) != MAP_ANONYMOUS)
 		file = SCHED->current->proc->filedes[fd]->file;
 
-	//mutex_lock(&vmspace->mutex);
+	mutex_lock(&vmspace->mutex);
 
 	/* Alokujemy nowy blok */
 	block = sma_alloc(vmspace->area, (addr_t)start, length, (flags & MAP_FIXED) ? SMA_ALLOC_FIXED : 0);
 	if (!block)
 	{
-		//mutex_unlock(&vmspace->mutex);
+		mutex_unlock(&vmspace->mutex);
 		return -ENOMEM;
 	}
 
@@ -101,14 +101,14 @@ int vm_mmap(void * start, size_t length, uint16_t flags, int fd, loff_t offset, 
 	if (err != 0)
 	{
 		/* TODO: Zwolnij pamięć */
-		//mutex_unlock(&vmspace->mutex);
+		mutex_unlock(&vmspace->mutex);
 		return err;
 	}
 
 	if (addr)
 		*addr = (void *)block->start;
 
-	//mutex_unlock(&vmspace->mutex);
+	mutex_unlock(&vmspace->mutex);
 	return 0;
 }
 

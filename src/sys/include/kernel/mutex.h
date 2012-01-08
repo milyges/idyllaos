@@ -35,5 +35,6 @@ struct mutex
 void mutex_init(struct mutex * mutex);
 int mutex_lock(struct mutex * mutex);
 void mutex_unlock(struct mutex * mutex);
+void mutex_dump(struct mutex * mutex);
 
 #endif /* __KERNEL_MUTEX_H */

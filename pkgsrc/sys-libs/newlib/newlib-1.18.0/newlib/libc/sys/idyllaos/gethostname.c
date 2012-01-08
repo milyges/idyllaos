@@ -21,18 +21,9 @@
 #include <sys/utsname.h>
 #include <errno.h>
 
-int gethostname(char * name, size_t len)
+int sethostname(const char * name, size_t len)
 {
-	struct utsname utsname;
-	if (uname(&utsname) != 0)
-		return -1;
-
-	if (len <= strlen(utsname.nodename))
-	{
-		errno = EINVAL;
-		return -1;
-	}
-
-	strcpy(name, utsname.nodename);
-	return 0;
+	int err;
+	__SYSCALL1(SYS_SETHOSTNAME, err, name);
+	__SYSCALL_EXIT(err);
 }

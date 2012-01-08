@@ -135,19 +135,140 @@ int inode_write(struct vnode * vnode)
 	return inode_do_write(vnode->mp->data, inode, vnode->ino);
 }
 
-void inode_free(struct vnode * vnode)
+int inode_link(struct vnode * vnode, char * name, ino_t ino_num, struct ext2_inode * inode, int type)
 {
-
+	struct ext2_dir_entry * ent;
+	struct ext2_data * data = vnode->mp->data;
+	
+	
+	int tmp, rec_len, name_len, err, blocks = ROUND_UP(vnode->size, vnode->block_size) / vnode->block_size;
+	uint32_t offset = 0;
+	void * buf;
+	
+	name_len = strlen(name);
+	if (name_len > EXT2_FILE_NAME)
+		return -ENOTSUP;
+	
+	
+	/* Zaokrąglamy aby zwiększyć wydajność */
+	rec_len = ROUND_UP(sizeof(struct ext2_dir_entry) - sizeof(uint8_t) * EXT2_FILE_NAME + name_len, 4);	
+	//kprintf("ext2: inode_link(): insert %s into %d (name_len: %d, rec_len: %d)\n", name, vnode->ino, name_len, rec_len);
+	
+	buf = kalloc(blocks * data->blk_size);
+	err = inode_read_content(vnode, buf, blocks, 0);
+	if (err < 0)
+		goto end;
+	
+	err = 0;
+	while(offset < vnode->size)
+	{
+		ent = (struct ext2_dir_entry *)(buf + offset);
+		//kprintf("ext2: inode_link(): existing entry at offset %u (rec_len: %d, name_len: %d, inode: %d)\n", offset, ent->rec_len, ent->name_len, ent->inode);
+		
+		if (ent->rec_len < rec_len)
+		{
+			offset += ent->rec_len;
+			continue;
+		}
+		else if (ent->inode != 0)
+		{
+			/* Sprawdzamy czy zmieści się nasz wpis */
+			tmp = ROUND_UP(sizeof(struct ext2_dir_entry) - sizeof(uint8_t) * EXT2_FILE_NAME + ent->name_len, 4);
+			if (ent->rec_len < (tmp + rec_len))
+			{
+				offset += ent->rec_len;
+				continue;
+			}
+			
+			/* Dzielimy wpis na dwa */
+			rec_len = ent->rec_len - tmp;
+			ent->rec_len = tmp;
+			offset += tmp;
+			ent = (struct ext2_dir_entry *)(buf + offset);
+			ent->rec_len = rec_len;
+		}
+		
+		ent->inode = ino_num;
+		ent->name_len = name_len;
+		ent->file_type = type;
+		strcpy((char *)ent->name, name);
+		
+		err = inode_write_content(vnode, buf, blocks, 0);
+		if (err < 0)
+			goto end;
+		
+		
+		err = 0;
+		goto end;
+	}
+	
+	TODO("alloc new block");
+	err = -ENOSYS;
+end:
+	kfree(buf);
+	
+	if (!err)
+	{
+		/* Aktualizacja liczby odnosień do i-node */
+		inode->i_links_count++;
+		err = inode_do_write(data, inode, ino_num);
+		
+		if (err < 0)
+		{
+			inode_unlink(vnode, name);
+		}
+	}
+	
+	return err;
 }
 
-int inode_link(struct vnode * vnode, char * name, ino_t ino_num, int type)
+int inode_unlink(struct vnode * vnode, char * name)
 {
-	return -ENOSYS;
-}
+	int pos, err;
+	void * buf;
+	struct ext2_dir_entry * entry;
+	struct ext2_dir_entry * prev = NULL;
+	int blocks = EXT2_INODE_BLOCKS(vnode->mp->data, vnode->blocks);
 
-int inode_unlink(struct vnode * parent, char * name)
-{
-	return -ENOSYS;
+	/* Ładujemy cały katalog do pamięci */
+	buf = kalloc(vnode->block_size * blocks);
+	err = inode_read_content(vnode, buf, blocks, 0);
+	if (err < 0)
+		goto end;
+
+	pos = 0;
+	err = -ENOENT;
+	
+	while(pos < vnode->size)
+	{
+		entry = (struct ext2_dir_entry *)(buf + pos);
+		if (!entry->rec_len) /* Koniec katalogu */
+			break;
+
+		if ((strlen(name) == entry->name_len) && (!strncmp(name, (char *)entry->name, entry->name_len)))
+		{
+			/* Jeżeli to nie jest pierwszy wpis, mozemy powiekszyc poprzedni */
+			if (prev)
+				prev->rec_len += entry->rec_len;
+			else
+				entry->inode = 0;
+			
+			err = inode_write_content(vnode, buf, blocks, 0);
+			if (err > 0)
+				err = 0;
+			break;
+			
+		}
+		
+		pos += entry->rec_len;
+		prev = entry;
+	}
+	
+	
+
+end:
+	kfree(buf);
+	return err;
 }
 
 int32_t inode_read_content(struct vnode * vnode, void * buf, uint32_t blocks, uint32_t start)
@@ -267,5 +388,50 @@ int32_t inode_read_content(struct vnode * vnode, void * buf, uint32_t blocks, ui
 /* Funkcja zapisuje zawartość i-node, sama alokując potrzebne bloki */
 int32_t inode_write_content(struct vnode * vnode, void * buf, uint32_t blocks, uint32_t start)
 {
-	return -ENOSYS;
+	int idx, err, tmp;
+	void * ptr;
+	//uint32_t * indirect_buf;
+	//uint32_t * indirect_buf2;
+
+	struct ext2_data * data = vnode->mp->data;
+	struct ext2_inode * inode = vnode->data;
+
+	ptr = buf;
+
+	/* Zapisujemy do 12 bezpośrednich bloków */
+	for(idx = start; (blocks > 0) && (idx < 12); idx++)
+	{
+		/* Blok jest pusty? */
+		if (inode->i_block[idx] < 2)
+		{
+			/* Próbujemy zaalokować blok w tej samej grupie */
+			err = block_alloc(data, &inode->i_block[idx], EXT2_GET_INODE_GROUP(data, vnode->ino));
+			if (err == -ENOSPC)
+			{
+				TODO("alloc in other group");
+			}
+			
+			if (err < 0)
+				return err;
+			
+			inode->i_blocks++;
+		}
+
+		err = bdev_write(data->mp->device, ptr, data->spb, EXT2_GET_SECTOR_NUM(data, inode->i_block[idx]));
+		if (err != data->spb)
+			return -EIO;
+
+		ptr += data->blk_size;
+		blocks--;
+	}
+
+	tmp = data->blk_size / sizeof(uint32_t);
+	
+	/* Czy są jakieś bloki niebezposrednie */
+	if (blocks > 0)
+	{
+		return -ENOSYS;
+	}
+	
+	return (ptr - buf) / vnode->block_size;
 }
