@@ -16,20 +16,30 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
 */
-#include <unistd.h>
-#include <string.h>
-#include <stdio.h>
+#include <sys/kctl.h>
 #include <errno.h>
-#include <limits.h>
+#include <stdio.h>
+#include <string.h>
 
 int main(int argc, char * argv[])
 {
- char * tty;
- if (!isatty(0)) 
-    return 1;
- tty = ttyname(0);
- if (!tty)
-    return 1;
- puts(tty);
- return 0;
+	struct kctl_kld_load_arg arg;
+	static char * nullargv[] = { NULL };
+	
+	if (argc < 2)
+	{
+		fprintf(stderr, "Usage: %s module [param1] [param2] ...\n", argv[0]);
+		return 1;
+	}
+	
+	arg.path = argv[1];
+	arg.argv = (argc > 2) ? &argv[2] : nullargv;
+	
+	if (kctl(KCTL_KLD_LOAD_MODULE, &arg) < 0)
+	{
+		fprintf(stderr, "%s: %s: %s\n", argv[0], argv[1], strerror(errno));
+		return 2;
+	}
+	
+	return 0;
 }

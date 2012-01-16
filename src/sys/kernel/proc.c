@@ -35,12 +35,32 @@ static SPINLOCK_NEW(_proc_list_lock);
 static pid_t _next_pid = 1;
 static SPINLOCK_NEW(_next_pid_lock);
 
+struct proc * get_proc(pid_t pid)
+{
+	struct proc * proc;
+	
+	sched_preempt_disable();
+	spinlock_lock(&_proc_list_lock);
+	LIST_FOREACH(&_proc_list, proc)
+	{
+		if (proc->pid == pid)
+		{
+			spinlock_unlock(&_proc_list_lock);
+			sched_preempt_enable();
+			return proc;
+		}
+	}
+	spinlock_unlock(&_proc_list_lock);
+	sched_preempt_enable();
+	return NULL;
+}
+
 void proctab_dump(void)
 {
 	struct proc * proc;
 	sched_preempt_disable();
 	spinlock_lock(&_proc_list_lock);
-	kprintf("\n   pid | parent | state \n");
+	kprintf("\n   pid | parent | state\n");
 	LIST_FOREACH(&_proc_list, proc)
 	{
 		kprintf(" %5d |  %5d | %d\n", proc->pid, proc->parent->pid, proc->main->state);

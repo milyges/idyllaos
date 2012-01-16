@@ -1,6 +1,6 @@
 /*
  * Idylla Operating System
- * Copyright (C) 2009-2010 Idylla Operating System Team
+ * Copyright (C) 2009-2012 Idylla Operating System Team
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -47,15 +47,16 @@ static int ext2_open(struct vnode * vnode)
 }
 
 static int ext2_close(struct vnode * vnode)
-{
+{	
 	if ((vnode->mp->flags & MS_RDONLY) != MS_RDONLY)
 	{
+		inode_write(vnode);
+		
 		if (!vnode->nlink)
 		{
-			
+			/* Zwalniamy i-node */
+			TODO("free i-node");
 		}
-		else
-			inode_write(vnode);
 	}
 	kfree(vnode->data);
 	return 0;
@@ -96,9 +97,81 @@ end:
 	return ino;
 }
 
-/* TODO: Optymalizacja odczytu/zapisu */
 static ssize_t ext2_read(struct vnode * vnode, void * buf, size_t len, loff_t offset)
 {
+	size_t left, bytes;
+	void * tmpbuf = NULL;
+	uint32_t start;
+	int err;
+	
+	//kprintf("ext2_read(%d, %x, %u, %llu)\n", vnode->ino, buf, len, offset);
+	
+	/* Przycinamy do rozmiaru pliku */
+	if (offset + len >= vnode->size)
+	{
+		if (vnode->size < offset)
+			return 0;
+		else
+			len = vnode->size - offset;
+	}
+	
+	left = len;
+	
+	/* Obliczamy pierwszy blok */
+	start = offset / vnode->block_size;
+	
+	/* Sprawdzamy czy offset jest wyrównany do bloku */
+	if (offset % vnode->block_size)
+	{
+		/* Jeśli nie, alokujemy bufor */
+		tmpbuf = kalloc(vnode->block_size);
+		
+		err = inode_read_content(vnode, tmpbuf, 1, start);
+		if (err < 0)
+			goto end;
+		
+		/* Kopiujemy dane z bufora tymczasowego do docelowego */
+		bytes = MIN(vnode->block_size - (offset % vnode->block_size), len);
+		memcpy(buf, (void *)(tmpbuf + (offset % vnode->block_size)), bytes);
+		left -= bytes;
+		buf += bytes;
+		start++;
+	}
+
+	if (left > vnode->block_size)
+	{
+		err = inode_read_content(vnode, buf, left / vnode->block_size, start);
+		if (err < 0)
+			goto end;
+		
+		bytes = ROUND_DOWN(left, vnode->block_size); 
+		buf += bytes;
+		left -= bytes;
+		start += bytes / vnode->block_size;
+	}
+	
+	if (left > 0)
+	{
+		if (!tmpbuf)
+			tmpbuf = kalloc(vnode->block_size);
+		
+		err = inode_read_content(vnode, tmpbuf, 1, start);
+		if (err < 0)
+			goto end;
+		
+
+		memcpy(buf, tmpbuf, left);
+		left = 0;
+	}
+	
+	err = len - left;
+end:	
+	if (tmpbuf)
+		kfree(tmpbuf);
+	
+	return err;
+#if 0
+
 	uint32_t start, count;
 	void * tmpbuf;
 	int err;
@@ -125,31 +198,83 @@ static ssize_t ext2_read(struct vnode * vnode, void * buf, size_t len, loff_t of
 end:
 	kfree(tmpbuf);
 	return err;
+#endif
 }
 
 static ssize_t ext2_write(struct vnode * vnode, void * buf, size_t len, loff_t offset)
 {
-	uint32_t start, count;
-	void * tmpbuf;
+	size_t left, bytes;
+	void * tmpbuf = NULL;
+	uint32_t start;
 	int err;
 	
-	start = offset / vnode->block_size;
-	count = ROUND_UP(len, vnode->block_size) / vnode->block_size;
+	//kprintf("ext2_write(%d, %x, %u, %llu)\n", vnode->ino, buf, len, offset);
 	
-	tmpbuf = kalloc(count * vnode->block_size);
-	err = inode_read_content(vnode, tmpbuf, count, start);	
-	if (err < 0)
-		goto end;
-	memcpy((void *)(tmpbuf + (offset % vnode->block_size)), buf, len);
-	err = inode_write_content(vnode, tmpbuf, count, start);
-	if (err < 0)
-		goto end;
-	if (offset + len > vnode->size)
-		vnode->size = offset + len;
-	ext2_sync(vnode);
-	err = len;
+	left = len;
+	
+	/* Obliczamy pierwszy blok */
+	start = offset / vnode->block_size;
+
+	/* Sprawdzamy czy offset jest wyrównany do bloku */
+	if (offset % vnode->block_size)
+	{
+		/* Jeśli nie, alokujemy bufor */
+		tmpbuf = kalloc(vnode->block_size);
+		memset(tmpbuf, 0, vnode->block_size);
+		
+		err = inode_read_content(vnode, tmpbuf, 1, start);
+		if (err < 0)
+			goto end;
+		
+		/* Kopiujemy dane z bufora zródłowego do tymczasowego */
+		bytes = MIN(vnode->block_size - (offset % vnode->block_size), len);
+		memcpy((void *)(tmpbuf + (offset % vnode->block_size)), buf, bytes);
+		
+		/* Zapisujemy zmiany */
+		err = inode_write_content(vnode, tmpbuf, 1, start);
+		if (err < 0)
+			goto end;
+		
+		left -= bytes;
+		buf += bytes;
+		start++;
+	}
+
+	if (left > vnode->block_size)
+	{
+		err = inode_write_content(vnode, buf, left / vnode->block_size, start);
+		if (err < 0)
+			goto end;
+		buf += ROUND_DOWN(left, vnode->block_size);
+		left -= ROUND_DOWN(left, vnode->block_size);
+		start += left / vnode->block_size;
+	}
+	
+	if ((left > 0) && ((offset + len) % vnode->block_size))
+	{
+		if (!tmpbuf)
+			tmpbuf = kalloc(vnode->block_size);
+		
+		err = inode_read_content(vnode, tmpbuf, 1, start);
+		if (err < 0)
+			goto end;
+		
+		memcpy(tmpbuf, buf, left);
+		err = inode_write_content(vnode, tmpbuf, 1, start);
+		if (err < 0)
+			goto end;
+		left = 0;
+	}
+	
+	err = len - left;
+	
+	vnode->size = MAX(vnode->size, offset + err);
+	inode_write(vnode);
+	
 end:
-	kfree(tmpbuf);
+	if (tmpbuf)
+		kfree(tmpbuf);
+	
 	return err;
 }
 
@@ -234,6 +359,11 @@ int ext2_creat(struct vnode * vnode, char * name, mode_t mode, uid_t uid, gid_t 
 	
 end:
 	return err;
+}
+
+static int ext2_unlink(struct vnode * vnode, char * name)
+{
+	return inode_unlink(vnode, name);	
 }
 
 static int ext2_mount(struct mountpoint * mp, char * flags)
@@ -358,7 +488,8 @@ static struct vnode_ops _ext2_vnode_ops =
 	.write = &ext2_write,
 	.getdents = &ext2_getdents,
 	.creat = &ext2_creat,
-	.sync = &ext2_sync
+	.sync = &ext2_sync,
+	.unlink = &ext2_unlink
 };
 
 static struct filesystem_ops _ext2_fs_ops =

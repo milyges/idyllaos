@@ -1,6 +1,6 @@
 /*
  * Idylla Operating System
- * Copyright (C) 2009-2010 Idylla Operating System Team
+ * Copyright (C) 2009-2012 Idylla Operating System Team
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,16 +16,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
 */
-#include <unistd.h>
-#include <string.h>
-#include <stdio.h>
-#include <errno.h>
-#include <limits.h>
+#include <kernel/types.h>
+#include <kernel/kctl.h>
+#include <lib/errno.h>
 
-int main(int argc, char * argv[])
+int sys_kctl(int cmd, void * arg)
 {
- char path[1024 + 1];
- getcwd(path, sizeof(path) - 1);
- puts(path);
- return 0;
+	switch(cmd)
+	{
+		case KCTL_KLD_LOAD_MODULE:
+			return kld_load(((struct kctl_kld_load_arg *)arg)->path, ((struct kctl_kld_load_arg *)arg)->argv);
+		case KCTL_KDEV_GET_DEVICE_EVENT:
+			return device_get_event(&((struct kctl_kdev_get_event_arg *)arg)->event_type, &((struct kctl_kdev_get_event_arg *)arg)->dev_type, ((struct kctl_kdev_get_event_arg *)arg)->name, &((struct kctl_kdev_get_event_arg *)arg)->dev_id);
+		default:
+			return -ENOTSUP;
+	}
 }

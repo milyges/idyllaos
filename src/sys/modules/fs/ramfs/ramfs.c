@@ -532,4 +532,4 @@ int clean(void)
 	return 0;
 }
 
-MODULE_INFO("ext2", &init, &clean);
+MODULE_INFO("ramfs", &init, &clean);

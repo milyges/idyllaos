@@ -27,7 +27,7 @@
 static struct bdev * _bdev_table[DEV_BLOCK_MAX];
 static SPINLOCK_NEW(_bdev_table_lock);
 
-dev_t bdev_register(struct bdev_ops * ops)
+dev_t bdev_register(struct bdev_ops * ops, void * dataptr)
 {
 	int i;
 	spinlock_lock(&_bdev_table_lock);
@@ -38,6 +38,7 @@ dev_t bdev_register(struct bdev_ops * ops)
 		{
 			_bdev_table[i] = kalloc(sizeof(struct bdev));
 			_bdev_table[i]->ops = ops;
+			_bdev_table[i]->dataptr = dataptr;
 			atomic_set(&_bdev_table[i]->refcount, 0);
 			spinlock_unlock(&_bdev_table_lock);
 			return MK_DEV(i + 1, 0);
@@ -67,7 +68,7 @@ int bdev_open(dev_t dev)
 	if (!bdev)
 		return -ENODEV;
 
-	err = bdev->ops->open(dev);
+	err = bdev->ops->open(bdev, dev);
 	if (err != 0)
 		atomic_dec(&bdev->refcount);
 	return err;
@@ -84,7 +85,7 @@ ssize_t bdev_read(dev_t dev, void * buf, size_t len, loff_t offset)
 		return -ENODEV;
 	if (!_bdev_table[DEV_MAJOR(dev) - 1]->ops->read)
 		return -ENOTSUP;
-	return _bdev_table[DEV_MAJOR(dev) - 1]->ops->read(dev, buf, len, offset);
+	return _bdev_table[DEV_MAJOR(dev) - 1]->ops->read(_bdev_table[DEV_MAJOR(dev) - 1], dev, buf, len, offset);
 }
 
 ssize_t bdev_write(dev_t dev, void * buf, size_t len, loff_t offset)
@@ -93,7 +94,7 @@ ssize_t bdev_write(dev_t dev, void * buf, size_t len, loff_t offset)
 		return -ENODEV;
 	if (!_bdev_table[DEV_MAJOR(dev) - 1]->ops->write)
 		return -ENOTSUP;
-	return _bdev_table[DEV_MAJOR(dev) - 1]->ops->write(dev, buf, len, offset);
+	return _bdev_table[DEV_MAJOR(dev) - 1]->ops->write(_bdev_table[DEV_MAJOR(dev) - 1], dev, buf, len, offset);
 }
 
 int bdev_ioctl(dev_t dev, int cmd, void * arg)
@@ -102,5 +103,5 @@ int bdev_ioctl(dev_t dev, int cmd, void * arg)
 		return -ENODEV;
 	if (!_bdev_table[DEV_MAJOR(dev) - 1]->ops->ioctl)
 		return -ENOTSUP;
-	return _bdev_table[DEV_MAJOR(dev) - 1]->ops->ioctl(dev, cmd, arg);
+	return _bdev_table[DEV_MAJOR(dev) - 1]->ops->ioctl(_bdev_table[DEV_MAJOR(dev) - 1], dev, cmd, arg);
 }

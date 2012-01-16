@@ -32,6 +32,16 @@ int main(int argc, char * argv[])
 
 	printf("IdyllaOS INIT, version 0.2-dev\n");
 
+	/* Uruchamiamy startup */
+	pid = fork();
+	switch(pid)
+	{
+		case -1: perror("init: fork()"); exit(1);
+		case 0: execl("/bin/bash", "/bin/bash", "/etc/startup.sh", NULL); perror("init: execve()"); _exit(1);		
+	}
+	
+	while(wait(NULL) != pid);
+	
 	printf("INIT: Starting shell...\n");
 	setenv("HOME", "/root", 1);
 	chdir("/root");

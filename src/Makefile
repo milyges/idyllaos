@@ -1,12 +1,12 @@
 MAKEFLAGS += --no-print-directory
 
-all: all-kernel all-sbin all-bin
+all: all-kernel all-sbin all-bin all-usr-bin
 	@true
 
-clean: clean-kernel clean-sbin clean-bin
+clean: clean-kernel clean-sbin clean-bin clean-usr-bin
 	@true
 
-install: install-kernel install-sbin install-bin
+install: install-kernel install-sbin install-bin install-usr-bin
 	@true
 
 disk: all
@@ -15,7 +15,7 @@ disk: all
 	@-sudo fsck.ext2 -y /dev/loop0
 	@sudo mount -text2 /dev/loop0 .tmp
 	@sudo DESTDIR=$(PWD)/.tmp PATH="$(PATH):$(PWD)/../toolchain/bin" make install
-	@-sudo bash
+#	@-sudo bash
 	@sudo umount .tmp
 	@sudo losetup -d /dev/loop0
 	@rm -rf .tmp
@@ -54,3 +54,12 @@ install-bin:
 
 clean-bin:
 	@make -C bin clean
+
+all-usr-bin:
+	@make -C usr.bin all
+
+install-usr-bin:
+	@make -C usr.bin install
+
+clean-usr-bin:
+	@make -C usr.bin clean

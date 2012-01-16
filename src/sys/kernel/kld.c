@@ -115,7 +115,7 @@ int kld_load_image(void * image, char * argv[])
 {
 	int err, argc;
 	struct kld_module * module;
-
+	struct kld_module * iter;
 	module = kalloc(sizeof(struct kld_module));
 	memset(module, 0, sizeof(struct kld_module));
 
@@ -135,6 +135,22 @@ int kld_load_image(void * image, char * argv[])
 		return err;
 	}
 
+	/* Sprawdzamy czy taki moduł nie jest załadowany */
+	spinlock_lock(&_modules_list_lock);
+	LIST_FOREACH(&_modules_list, iter)
+	{
+		if (!strcmp(iter->info->name, module->info->name))
+		{
+			spinlock_unlock(&_modules_list_lock);
+			use_list_release(module);
+			if (module->symtab) kfree(module->symtab);
+			if (module->bss) kfree(module->bss);
+			kfree(module);
+			return -EEXIST;
+		}
+	}
+	
+	spinlock_unlock(&_modules_list_lock);
 	/* Obliczamy argc */
 	argc = 0;
 	while(argv[++argc]);
@@ -157,7 +173,7 @@ int kld_load_image(void * image, char * argv[])
 	return 0;
 }
 
-int kld_load_file(char * path, char * argv[])
+int kld_load(char * path, char * argv[])
 {
 	void * image;
 	struct stat stat;

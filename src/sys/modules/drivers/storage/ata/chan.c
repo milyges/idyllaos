@@ -17,9 +17,12 @@
  *
 */
 #include <arch/asm.h>
+#include <arch/page.h>
 #include <arch/cpu.h>
 #include <kernel/types.h>
 #include <kernel/kprintf.h>
+#include <mm/phys.h>
+#include <modules/drivers/storage/storage.h>
 #include <modules/drivers/storage/ata.h>
 #include <lib/errno.h>
 
@@ -111,6 +114,12 @@ int ata_channel_wait(struct ata_channel * chan)
 		return -EIO;
 	}
 
+	if (chan->dma_xfer)
+	{
+		data = ATA_READ_BDMA(chan, ATA_REG_BDMA_STATUS);
+		data |= 0x04;
+		ATA_WRITE_BDMA(chan, ATA_REG_BDMA_STATUS, data);
+	}
 	return 0;
 }
 
@@ -135,7 +144,8 @@ void ata_channel_probe(struct ata_channel * chan)
 	uint8_t buf[512];
 	struct ata_identify_info * info;
 	int i, err;
-
+	extern struct storage_ops __pata_ops;
+	
 	for(i=0;i<ATA_DEVICES;i++)
 	{
 		/* Wymuszamy wybranie urządzenia */
@@ -180,6 +190,9 @@ void ata_channel_probe(struct ata_channel * chan)
 		info = (struct ata_identify_info *)buf;
 		ata_fix_string(info->model_id, 20);
 
+		/* Sprawdzamy czy urządznie może pracować w trybie DMA */
+		chan->devices[i].dma = 1;
+				
 		/* Pokazujemy informacje */
 		if (chan->devices[i].type == ATA_TYPE_PATAPI)
 		{
@@ -194,12 +207,9 @@ void ata_channel_probe(struct ata_channel * chan)
 			kprintf("ata%d.%d: ATAPI %s\n", chan->id, i, info->model_id);
 		}
 		else if (chan->devices[i].type == ATA_TYPE_PATA)
-		{
-			/*chan->devices[i].geom.sectors = info->lba_sectors;
-			chan->devices[i].geom.bps = 512;*/
-
+		{	
 			kprintf("ata%d.%d: IDE %s (%lu sectors)\n", chan->id, i, info->model_id, info->lba_sectors);
-			part_load(chan, i);
+			storage_register(STORAGE_TYPE_DISK, &__pata_ops, chan, &chan->devices[i].id);
 		}
 	}
 

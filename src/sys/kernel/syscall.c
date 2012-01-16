@@ -26,6 +26,7 @@
 #include <kernel/debug.h>
 #include <kernel/vfs.h>
 #include <kernel/hostname.h>
+#include <kernel/kctl.h>
 #include <mm/heap.h>
 #include <mm/vmm.h>
 #include <lib/string.h>
@@ -186,9 +187,8 @@ static pid_t _sys_getpid(void)
 }
 
 static int _sys_kill(pid_t pid, int sig)
-{
-	STUB();
-	return -ENOSYS;
+{	
+	return sys_kill(pid, sig);
 }
 
 static int _sys_stat(char * path, struct stat * stat)
@@ -431,6 +431,36 @@ static int _sys_sethostname(char * buf)
 	return sys_sethostname(buf);
 }
 
+static int _sys_kctl(int cmd, void * arg)
+{
+	if (!IS_IN_USERMEM(arg))
+		return ;
+	return sys_kctl(cmd, arg);
+}
+
+static int _sys_times()
+{
+	STUB();
+	return -ENOSYS;
+}
+
+static int _sys_time(time_t * buf)
+{
+	if (!IS_IN_USERMEM(buf))
+		return -EFAULT;
+	
+	return sys_time(buf);
+}
+
+static int _sys_stime(time_t * buf)
+{
+	if (!IS_IN_USERMEM(buf))
+		return -EFAULT;
+	
+	STUB();
+	return -ENOSYS;
+}
+
 void * __syscall_table[] =
 {
 	&_sys_nosys,
@@ -487,7 +517,11 @@ void * __syscall_table[] =
 	&_sys_umount,
 	&_sys_uname,
 	&_sys_gethostname,
-	&_sys_sethostname
+	&_sys_sethostname,
+	&_sys_kctl,
+	&_sys_times,
+	&_sys_time,
+	&_sys_stime
 };
 
 const int __syscall_table_size = sizeof(__syscall_table) / sizeof(void *);

@@ -24,7 +24,7 @@
 #include <kernel/kprintf.h>
 #include <kernel/proc.h>
 
-static volatile uint64_t _ticks;
+volatile uint64_t __ticks;
 static unsigned _do_schedule = 1;
 extern time_t __systime;
 
@@ -37,24 +37,29 @@ void pit_delay(int ms)
 {
 	volatile uint64_t end;
 	ms = ms / (1000 / PIT_HZ);
-	end = _ticks + ms;
-	while(end > _ticks) ;
+	end = __ticks + ms;
+	while(end > __ticks) ;
 }
 
 static void pit_handler(int irq)
 {
-	_ticks++;
-	if (!(_ticks % PIT_HZ))
+	__ticks++;
+	if (!(__ticks % PIT_HZ))
 		__systime++;
 
 	if (_do_schedule)
 		schedule();
 }
 
+int sys_uptime(time_t * uptime)
+{
+	*uptime = __ticks / PIT_HZ;
+}
+
 void pit_init(void)
 {
 	uint32_t val = 1193180 / PIT_HZ;
-	_ticks = 0;
+	__ticks = 0;
 	outportb(PIT_COMMAND, 0x36);
 	outportb(PIT_CHANNEL0, val & 0xFF);
 	outportb(PIT_CHANNEL0, (val >> 8) & 0xFF);

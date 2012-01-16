@@ -20,6 +20,7 @@
 #include <kernel/types.h>
 #include <kernel/device.h>
 #include <kernel/kprintf.h>
+#include <kernel/wait.h>
 #include <mm/heap.h>
 #include <lib/errno.h>
 #include <lib/string.h>
@@ -31,10 +32,58 @@ static SPINLOCK_NEW(_cdev_list_lock);
 static LIST_NEW(_bdev_list);
 static SPINLOCK_NEW(_bdev_list_lock);
 
+static LIST_NEW(_event_list);
+static SPINLOCK_NEW(_event_list_lock);
+static WAIT_NEW(_event_wait);
+
+static void add_event(uint8_t type, uint8_t dev_type, struct devtable * dev)
+{
+	struct dev_event * ev;
+	ev = kalloc(sizeof(struct dev_event));
+	list_init(&ev->list);
+	ev->event_type = type;
+	ev->dev_type = dev_type;
+	strcpy(ev->name, dev->name);
+	ev->dev_id = dev->id;
+	
+	spinlock_lock(&_event_list_lock);
+	list_add(&_event_list, &ev->list);
+	spinlock_unlock(&_event_list_lock);
+	wait_wakeup(&_event_wait);
+}
+
+int device_get_event(uint8_t * event_type, unsigned * dev_type, char * name, dev_t * devid)
+{
+	struct dev_event * event;
+	
+	spinlock_lock(&_event_list_lock);
+	
+	while(1)
+	{		
+		if (!LIST_IS_EMPTY(&_event_list))
+		{
+			event = (struct dev_event *)_event_list.prev;
+			list_remove(&event->list);
+			break;
+		}
+		
+		wait_sleep(&_event_wait, &_event_list_lock);
+	}
+	
+	spinlock_unlock(&_event_list_lock);
+	
+	*event_type = event->event_type;
+	*dev_type = event->dev_type;
+	strcpy(name, event->name);
+	*devid = event->dev_id;
+	
+	kfree(event);
+	
+	return 0;
+}
+
 int device_register(unsigned type, char * name, dev_t id)
 {
-	//kprintf(KERN_DEBUG"devmgr: registering device %s -> (%d, %d)\n", name, DEV_MAJOR(id), DEV_MINOR(id));
-
 	struct devtable * dev = kalloc(sizeof(struct devtable));
 	list_init(&dev->list);
 	dev->id = id;
@@ -53,6 +102,7 @@ int device_register(unsigned type, char * name, dev_t id)
 		spinlock_unlock(&_cdev_list_lock);
 	}
 
+	add_event(DEV_EVENT_REGISTER, type, dev);
 	return 0;
 }
 

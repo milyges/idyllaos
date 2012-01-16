@@ -3,9 +3,9 @@
 # Top direcotry
 TOPDIR=../..
 # Application name
-APPNAME=tty
+APPNAME=date
 # Application sources
-SOURCES=tty.c
+SOURCES=date.c
 # Application directory
 APPDIR=bin
 

@@ -26,32 +26,12 @@
 #include <lib/errno.h>
 #include <lib/string.h>
 #include <lib/printf.h>
+#include <modules/drivers/storage/storage.h>
 #include <modules/drivers/storage/ata.h>
 #include <modules/drivers/bus/pci.h>
 
 static LIST_NEW(_controllers_list);
 static int _controllers_count;
-
-static struct ata_controller * ata_decode_devid(dev_t id, int * chan, int * device, int * part)
-{
-	struct ata_controller * ctrl;
-	int tmp = DEV_MINOR(id);
-
-	*part = tmp & 0xF;
-	tmp >>= 4;
-	*device = tmp % ATA_DEVICES;
-	tmp /= ATA_DEVICES;
-	*chan = tmp % ATA_CHANNELS;
-	tmp /= ATA_CHANNELS;
-
-	LIST_FOREACH(&_controllers_list, ctrl)
-	{
-		if(ctrl->id == tmp)
-			return ctrl;
-	}
-
-	return NULL;
-}
 
 static void ata_irq(unsigned irq)
 {
@@ -65,14 +45,16 @@ static void ata_irq(unsigned irq)
 			if (ctrl->channels[i].irq == irq)
 			{
 				//kprintf("ata%d: IRQ!\n", ctrl->channels[i].id);
-				atomic_inc(&ctrl->channels[i].irq_counter);
+				if ((!ctrl->channels[i].dma_xfer) || (ATA_READ_BDMA(&ctrl->channels[i], ATA_REG_BDMA_STATUS) & ATA_BDMA_STAT_IRQ))
+					atomic_inc(&ctrl->channels[i].irq_counter);
+				ATA_READ_CTRL(&ctrl->channels[i], ATA_REG_ALTSTAT);
 				return;
 			}
 		}
 	}
 }
 
-
+# if 0
 static int ata_open(dev_t devid)
 {
 	struct ata_controller * ctrl;
@@ -174,32 +156,18 @@ static ssize_t ata_write(dev_t devid, void * buf, size_t len, loff_t off)
 	return ret;
 }
 
-static int ata_ioctl(dev_t devid, int cmd, void * arg)
-{
-	return -ENOSYS;
-}
-
-static struct bdev_ops _ata_ops =
-{
-	.open = &ata_open,
-	.close = &ata_close,
-	.read = &ata_read,
-	.write = &ata_write,
-	.ioctl = &ata_ioctl
-};
+#endif 
 
 static void controller_add(struct pci_device * pcidev)
 {
-	struct ata_controller * ctrl;
+	struct ata_controller * ctrl;	
 	uint32_t tmp;
-	int i, j, k, err;
-	char buf[32];
-
+	int i, err;
+	
 	ctrl = kalloc(sizeof(struct ata_controller));
 	memset(ctrl, 0, sizeof(struct ata_controller));
 	list_init(&ctrl->list);
 	ctrl->id = _controllers_count++;
-	dev_t devid = bdev_register(&_ata_ops);
 
 	/* Odczytujemy wartości porów IO z PCI */
 	pci_readRegister(pcidev, PCI_REG_BAR0, &tmp);
@@ -237,27 +205,6 @@ static void controller_add(struct pci_device * pcidev)
 
 		/* Wykrywamy urządzenia */
 		ata_channel_probe(&ctrl->channels[i]);
-
-		/* Rejestrujemy urzadzenia */
-		for(j=0;j<ATA_DEVICES;j++)
-		{
-			if (ctrl->channels[i].devices[j].type == ATA_TYPE_NONE)
-				continue;
-			DEV_MINOR(devid) = (ctrl->channels[i].id * ATA_DEVICES + j) << 4;
-			device_register(DEV_BLOCK, sprintf(buf, "ata%d.%d", ctrl->channels[i].id, j), devid);
-
-			if (ctrl->channels[i].devices[j].type == ATA_TYPE_PATA)
-			{
-				for(k=0;k<14;k++)
-				{
-					if (ctrl->channels[i].devices[j].parts[k].type != 0)
-					{
-						DEV_MINOR(devid) = ((ctrl->channels[i].id * ATA_DEVICES + j) << 4) + k + 1;
-						device_register(DEV_BLOCK, sprintf(buf, "ata%d.%d.%d", ctrl->channels[i].id, j, k), devid);
-					}
-				}
-			}
-		}
 	}
 }
 

@@ -22,6 +22,7 @@
 #include <arch/atomic.h>
 #include <kernel/types.h>
 #include <kernel/mutex.h>
+#include <kernel/device.h>
 
 #define PCI_CLASS_STORAGE      0x01
 #define PCI_SUBCLASS_IDE       0x01
@@ -54,6 +55,10 @@
 #define ATA_REG_ALTSTAT             0
 #define ATA_REG_ADDRESS             1
 
+#define ATA_REG_BDMA_COMMAND        0
+#define ATA_REG_BDMA_STATUS         2
+#define ATA_REG_BDMA_PRDT           4
+
 /* Bity rejestru kontrolnego */
 #define ATA_CTRL_HOB                0x80
 #define ATA_CTRL_RESET              0x04
@@ -66,6 +71,15 @@
 #define ATA_STAT_SRV                0x10
 #define ATA_STAT_DRQ                0x08
 #define ATA_STAT_ERR                0x01
+
+/* Bity rejestru stanu dla BDMA */
+#define ATA_BDMA_STAT_IRQ           0x04
+#define ATA_BDMA_STAT_ERROR         0x02
+#define ATA_BDMA_STAT_DMAMODE       0x01
+
+/* Polecenia dla BDMA */
+#define ATA_BDMA_CMD_START          0x01
+#define ATA_BDMA_CMD_READ           0x08
 
 /* Polecenia */
 #define ATA_CMD_NOP                 0x00
@@ -106,6 +120,11 @@
 #define ATA_READ_CTRL(c,r)          inportb((c)->ctrl + (r))
 #define ATA_WRITE_BASE(c,r,v)       outportb((c)->base + (r), v)
 #define ATA_WRITE_CTRL(c,r,v)       outportb((c)->ctrl + (r), v)
+#define ATA_WRITE_BDMA(c,r,v)       outportb((c)->bdma + (r), v)
+#define ATA_READ_BDMA(c,r)          inportb((c)->bdma + (r))
+
+/* I tak nigdy nie będziemy czytać jednocześnie */
+#define ATA_DMA_BUF_SIZE            0x10000
 
 /* Dane zwracane przez polecenie IDENTIFY */
 struct ata_identify_info
@@ -195,6 +214,13 @@ struct ata_identify_info
  uint16_t reserved23[95];
 } PACKED;
 
+struct ata_dma_prdtable
+{
+	uint32_t addr;
+	uint16_t size;
+	uint16_t last;
+} PACKED;
+
 /* Partycja */
 struct ata_partition
 {
@@ -206,12 +232,11 @@ struct ata_partition
 /* Urządzenie ATA */
 struct ata_device
 {
+	dev_t id;
 	uint8_t type;
 
-	/* TODO: Geometria urządzenia */
-
-	uint8_t partitions_count;
-	struct ata_partition parts[14];
+	/* Czy urządzenie wspiera DMA */
+	uint8_t dma;
 };
 
 /* Kanał ATA */
@@ -223,7 +248,13 @@ struct ata_channel
 	uint16_t base;
 	uint16_t ctrl;
 	uint16_t bdma;
-
+	
+	paddr_t dma_buf_phys;
+	paddr_t prdtable_phys;
+	void * dma_buf;
+	struct ata_dma_prdtable * prd;
+	uint8_t dma_xfer;
+	
 	uint8_t irq; /* Przypisane IRQ */
 	atomic_t irq_counter; /* Licznik wywołań IRQ */
 
@@ -242,6 +273,18 @@ struct ata_controller
 	struct ata_channel channels[ATA_CHANNELS];
 };
 
+static inline int ata_id2dev(struct ata_channel * chan, dev_t id)
+{
+	int i;
+	for(i = 0; i < ATA_DEVICES; i++)
+	{
+		if (DEV_MAJOR(chan->devices[i].id) == DEV_MAJOR(id))
+			return i;
+	}
+	
+	return -1;
+}
+
 void ata_device_select(struct ata_channel * chan, uint8_t dev);
 int ata_channel_reset(struct ata_channel * chan);
 int ata_channel_wait(struct ata_channel * chan);
@@ -251,16 +294,14 @@ void ata_channel_probe(struct ata_channel * chan);
 void pio_xfer_in(struct ata_channel * chan, void * buf, unsigned len);
 void pio_xfer_out(struct ata_channel * chan, void * buf, unsigned len);
 
+int dma_xfer_prepare(struct ata_channel * chan, uint8_t device, unsigned rw, uint32_t bytes);
+int dma_xfer_start(struct ata_channel * chan);
+int dma_xfer_finish(struct ata_channel * chan);
+
 int patapi_reset(struct ata_channel * chan, uint8_t device);
 int patapi_load(struct ata_channel * chan, uint8_t device);
 int patapi_eject(struct ata_channel * chan, uint8_t device);
 ssize_t patapi_read(struct ata_channel * chan, uint8_t device, void * dest, size_t len, loff_t off);
 
-ssize_t pata_read(struct ata_channel * chan, uint8_t device, void * dest, size_t len, loff_t off);
-ssize_t pata_write(struct ata_channel * chan, uint8_t device, void * dest, size_t len, loff_t off);
-
-void part_load(struct ata_channel * chan, uint8_t device);
-ssize_t part_read(struct ata_channel * chan, uint8_t device, uint8_t part, void * dest, size_t len, loff_t off);
-ssize_t part_write(struct ata_channel * chan, uint8_t device, uint8_t part, void * dest, size_t len, loff_t off);
 
 #endif /* __MODULES_DRIVERS_STORAGE_ATA_H */

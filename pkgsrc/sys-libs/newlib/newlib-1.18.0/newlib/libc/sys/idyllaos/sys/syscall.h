@@ -84,6 +84,10 @@ extern "C" {
 #define SYS_UNAME         52
 #define SYS_GETHOSTNAME   53
 #define SYS_SETHOSTNAME   54
+#define SYS_KCTL          55
+#define SYS_TIMES         56
+#define SYS_TIME          57
+#define SYS_STIME         58
 
 #ifdef __cplusplus
 }

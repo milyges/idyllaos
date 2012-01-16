@@ -3,10 +3,10 @@
 # Top direcotry
 TOPDIR=../..
 # Application name
-APPNAME=pwd
+APPNAME=uptime
 # Application sources
-SOURCES=pwd.c
+SOURCES=uptime.c
 # Application directory
-APPDIR=bin
+APPDIR=usr/bin
 
 include $(TOPDIR)/scripts/application.mak

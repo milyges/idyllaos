@@ -1,6 +1,6 @@
 /*
  * Idylla Operating System
- * Copyright (C) 2009  Idylla Operating System Team
+ * Copyright (C) 2009-2012 Idylla Operating System Team
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

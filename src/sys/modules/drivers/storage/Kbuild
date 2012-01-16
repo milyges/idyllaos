@@ -1,0 +1,3 @@
+
+MOD_SOURCES=storage.c buffer.c msdos-part.c
+TARGET=storage.ko

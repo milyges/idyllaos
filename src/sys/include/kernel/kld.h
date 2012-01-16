@@ -56,7 +56,7 @@ struct kld_module
 
 void * kld_import(char * name, struct kld_module * module);
 int kld_load_image(void * image, char * argv[]);
-int kld_load_file(char * path, char * argv[]);
+int kld_load(char * path, char * argv[]);
 int kld_unload(char * name);
 char * kld_addr2name(void * addr);
 

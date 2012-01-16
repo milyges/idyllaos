@@ -574,7 +574,7 @@ int sys_close(int fd, struct proc * proc)
 			cdev_close(filedes->file->vnode->rdev);
 		else if (S_ISBLK(filedes->file->vnode->mode))
 			bdev_close(filedes->file->vnode->rdev);
-
+		
 		vnode = filedes->file->vnode;
 		kfree(filedes->file);
 		VNODE_REL(vnode);
@@ -622,7 +622,6 @@ int sys_lstat(char * path, struct stat * stat, struct proc * proc)
 	VNODE_REL(vnode);
 	return 0;
 }
-
 
 ssize_t sys_read(int fd, void * buf, size_t len, struct proc * proc)
 {
@@ -842,6 +841,8 @@ int sys_mount(char * src, char * dest, char * fstype, int flags, void * data, st
 	struct filesystem * fs;
 	struct vnode * vnode;
 	struct mountpoint * mp;
+	struct stat stat;
+	
 	dev_t devid = 0;
 	int err;
 
@@ -861,8 +862,11 @@ int sys_mount(char * src, char * dest, char * fstype, int flags, void * data, st
 	/* Jeżeli system plikow wymaga urządzenia to go szukamy */
 	if ((fs->flags & FS_NODEV) != FS_NODEV)
 	{
-		TODO("get device id");
-		return -ENOSYS;
+		err = sys_stat(src, &stat, proc);
+		if (err < 0)
+			return err;
+		
+		devid = stat.st_rdev;
 	}
 
 	/* Sprawdzamy czy punkt montowania istnieje i jest katalogiem */
@@ -1122,9 +1126,10 @@ int sys_unlink(char * path, struct proc * proc)
 	if (!err)
 	{
 		vnode->nlink--;
+		
 		VNODE_REL(vnode);
-		/* Jeżeli można zwolnoć v-node to go zwalniamy (i tak zostanie zapisany w funkcji close),
-		   w innym wypadku zapisujemy tylko zmienione informacje o v-vnodzie na dysk */
+		
+		/* Jeżeli można zwolnoć v-node to go zwalniamy */
 		if ((!vnode->nlink) && (!atomic_get(&vnode->refcount)))
 			vnode_free(vnode);
 		else if (vnode->ops->sync)
@@ -1205,6 +1210,8 @@ int sys_fcntl(int fd, int cmd, void * arg, struct proc * proc)
 	if ((fd < 0) || (fd >= OPEN_MAX) || (!proc->filedes[fd]))
 		return -EBADF;
 
+	//kprintf("sys_fcntl(%d, %d, %x, %d)\n", fd, cmd, arg, proc->pid);
+	
 	switch(cmd)
 	{
 		case F_DUPFD: return do_sys_dup(fd, (int)arg, proc);
@@ -1313,7 +1320,8 @@ int vfs_clone(struct proc * child, struct proc * parent)
 	child->vnode_root = parent->vnode_root;
 	VNODE_HOLD(parent->vnode_current);
 	child->vnode_current = parent->vnode_current;
-
+	child->umask = parent->umask;
+	
 	for(i=0;i<OPEN_MAX;i++)
 	{
 		if (parent->filedes[i])

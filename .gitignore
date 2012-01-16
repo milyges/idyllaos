@@ -1,3 +1,7 @@
 *.o
 *~
+*.ko
+*.sys
 /toolchain/tmp/*
+*.tar.gz
+*.tar.bz2

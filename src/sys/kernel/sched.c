@@ -123,6 +123,8 @@ void schedule(void)
 		/* Zmieniamy kontekst */
 		ctx_switch(&old->ctx, &SCHED->current->ctx);
 	}
+	
+	do_signals(SCHED->current->proc);
 }
 
 void sched_init(int cpuid)

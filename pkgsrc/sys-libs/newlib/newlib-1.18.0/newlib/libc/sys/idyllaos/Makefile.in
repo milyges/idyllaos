@@ -90,7 +90,9 @@ am__objects_1 = lib_a-chdir.$(OBJEXT) lib_a-close.$(OBJEXT) \
 	lib_a-nanosleep.$(OBJEXT) lib_a-sigaction.$(OBJEXT) \
 	lib_a-uname.$(OBJEXT) lib_a-sigprocmask.$(OBJEXT) \
 	lib_a-setpgrp.$(OBJEXT) lib_a-getpgrp.$(OBJEXT) \
-	lib_a-sethostname.$(OBJEXT)
+	lib_a-sethostname.$(OBJEXT) lib_a-kctl.$(OBJEXT) \
+	lib_a-times.$(OBJEXT) lib_a-time.$(OBJEXT) \
+	lib_a-stime.$(OBJEXT)
 @USE_LIBTOOL_FALSE@am_lib_a_OBJECTS = $(am__objects_1)
 lib_a_OBJECTS = $(am_lib_a_OBJECTS)
 LTLIBRARIES = $(noinst_LTLIBRARIES)
@@ -105,7 +107,7 @@ am__objects_2 = chdir.lo close.lo execve.lo _exit.lo fork.lo fstat.lo \
 	getegid.lo alarm.lo setuid.lo setgid.lo getpwent.lo \
 	getgrent.lo vfork.lo mount.lo umount.lo nanosleep.lo \
 	sigaction.lo uname.lo sigprocmask.lo setpgrp.lo getpgrp.lo \
-	sethostname.lo
+	sethostname.lo kctl.lo times.lo time.lo stime.lo
 @USE_LIBTOOL_TRUE@am_libidyllaos_la_OBJECTS = $(am__objects_2)
 libidyllaos_la_OBJECTS = $(am_libidyllaos_la_OBJECTS)
 libidyllaos_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
@@ -286,7 +288,8 @@ GENERAL_SOURCES = \
 	fcntl.c utime.c chown.c mkdir.c rmdir.c ftruncate.c ioctl.c termios.c select.c \
 	getlogin.c gethostname.c mknod.c mkfifo.c pipe.c getppid.c getuid.c geteuid.c getgid.c \
 	getegid.c alarm.c setuid.c setgid.c getpwent.c getgrent.c vfork.c mount.c umount.c \
-	nanosleep.c sigaction.c uname.c sigprocmask.c setpgrp.c getpgrp.c sethostname.c
+	nanosleep.c sigaction.c uname.c sigprocmask.c setpgrp.c getpgrp.c sethostname.c kctl.c \
+	times.c time.c stime.c
 
 ADD_OBJS = \
 	$(IDYLLAOS_MACH_LIB)
@@ -763,6 +766,30 @@ lib_a-sethostname.o: sethostname.c
 
 lib_a-sethostname.obj: sethostname.c
 	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-sethostname.obj `if test -f 'sethostname.c'; then $(CYGPATH_W) 'sethostname.c'; else $(CYGPATH_W) '$(srcdir)/sethostname.c'; fi`
+
+lib_a-kctl.o: kctl.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-kctl.o `test -f 'kctl.c' || echo '$(srcdir)/'`kctl.c
+
+lib_a-kctl.obj: kctl.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-kctl.obj `if test -f 'kctl.c'; then $(CYGPATH_W) 'kctl.c'; else $(CYGPATH_W) '$(srcdir)/kctl.c'; fi`
+
+lib_a-times.o: times.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-times.o `test -f 'times.c' || echo '$(srcdir)/'`times.c
+
+lib_a-times.obj: times.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-times.obj `if test -f 'times.c'; then $(CYGPATH_W) 'times.c'; else $(CYGPATH_W) '$(srcdir)/times.c'; fi`
+
+lib_a-time.o: time.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-time.o `test -f 'time.c' || echo '$(srcdir)/'`time.c
+
+lib_a-time.obj: time.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-time.obj `if test -f 'time.c'; then $(CYGPATH_W) 'time.c'; else $(CYGPATH_W) '$(srcdir)/time.c'; fi`
+
+lib_a-stime.o: stime.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-stime.o `test -f 'stime.c' || echo '$(srcdir)/'`stime.c
+
+lib_a-stime.obj: stime.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-stime.obj `if test -f 'stime.c'; then $(CYGPATH_W) 'stime.c'; else $(CYGPATH_W) '$(srcdir)/stime.c'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo

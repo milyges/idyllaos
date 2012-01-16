@@ -43,7 +43,10 @@ option DEBUG_TODO
 # Moduly do skompilowania
 module test
 module drivers/bus/pci
+module drivers/storage
 module drivers/storage/ata
 module drivers/char/tty
+module drivers/char/null
+module drivers/display/vbe
 module fs/ext2
 module fs/ramfs

@@ -23,5 +23,6 @@
 
 int sys_time(time_t * time);
 int sys_stime(time_t * time);
+int sys_uptime(time_t * uptime);
 
 #endif /* __KERNEL_TIME_H */

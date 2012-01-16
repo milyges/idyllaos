@@ -1,6 +1,6 @@
 /*
  * Idylla Operating System
- * Copyright (C) 2009-2010 Idylla Operating System Team
+ * Copyright (C) 2009-2012 Idylla Operating System Team
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,8 +20,10 @@
 #include <arch/cpu.h>
 #include <kernel/types.h>
 #include <kernel/kprintf.h>
-#include <modules/drivers/storage/ata.h>
+#include <lib/string.h>
 #include <lib/errno.h>
+#include <modules/drivers/storage/storage.h>
+#include <modules/drivers/storage/ata.h>
 
 static unsigned lba_setup(struct ata_channel * chan, loff_t lba, uint8_t seccount)
 {
@@ -73,7 +75,7 @@ static unsigned lba_setup(struct ata_channel * chan, loff_t lba, uint8_t seccoun
 static ssize_t pata_do_rw(struct ata_channel * chan, uint8_t device, void * buf, size_t len, loff_t off, unsigned rw)
 {
 	int err, i, do_sects;
-	uint8_t cmd = 0;
+	uint8_t cmd = 0, dma = chan->devices[device].dma;
 	ssize_t done = 0;
 	unsigned lba_mode;
 
@@ -87,58 +89,123 @@ static ssize_t pata_do_rw(struct ata_channel * chan, uint8_t device, void * buf,
 	while(len > 0)
 	{
 		do_sects = len;
-		if (do_sects >= 256)
-			do_sects = 0;
+		if (do_sects >= 128)
+			do_sects = 128;
 		len -= do_sects;
 
 		/* Czekamy na urządzenie */
 		err = ata_channel_poll(chan, ATA_STAT_RDY, 1);
 		if (err != 0)
 			return -EBUSY;
-
+		
+		if (dma)
+		{
+			dma_xfer_prepare(chan, device, rw, do_sects * 512);
+		}
+		
 		lba_mode = lba_setup(chan, off, do_sects);
-		if ((lba_mode == ATA_LBA28) && (rw == ATA_RW_READ)) cmd = ATA_CMD_READ_PIO;
-		else if ((lba_mode == ATA_LBA48) && (rw == ATA_RW_READ)) cmd = ATA_CMD_READ_PIO_EXT;
-		else if ((lba_mode == ATA_LBA28) && (rw == ATA_RW_WRITE)) cmd = ATA_CMD_WRITE_PIO;
-		else if ((lba_mode == ATA_LBA48) && (rw == ATA_RW_WRITE)) cmd = ATA_CMD_WRITE_PIO_EXT;
+		if ((lba_mode == ATA_LBA28) && (rw == ATA_RW_READ)) cmd = dma ? ATA_CMD_READ_DMA : ATA_CMD_READ_PIO;
+		else if ((lba_mode == ATA_LBA48) && (rw == ATA_RW_READ)) cmd = dma ? ATA_CMD_READ_DMA_EXT : ATA_CMD_READ_PIO_EXT;
+		else if ((lba_mode == ATA_LBA28) && (rw == ATA_RW_WRITE)) cmd = dma ? ATA_CMD_WRITE_DMA : ATA_CMD_WRITE_PIO;
+		else if ((lba_mode == ATA_LBA48) && (rw == ATA_RW_WRITE)) cmd = dma ? ATA_CMD_WRITE_DMA_EXT : ATA_CMD_WRITE_PIO_EXT;
 
-		//kprintf("pata_do_rw(): offset=%u, do_sect=%u, lba=%u, cmd=%x\n", off, do_sects, lba_mode, cmd);
+		err = ata_channel_poll(chan, ATA_STAT_BSY, 0);
+		if (err != 0)
+			return -EBUSY;
+		
 		ATA_WRITE_BASE(chan, ATA_REG_CMD, cmd);
 		DELAY400NS();
-
-		for(i=0;i<do_sects;i++)
+	
+		if (dma)
 		{
+			if (rw == ATA_RW_WRITE)
+				memcpy(chan->dma_buf, buf, do_sects * 512);
+			
+			dma_xfer_start(chan);
+			err = ata_channel_wait(chan);
+			if (err != 0)
+				return err;
+			
 			if (rw == ATA_RW_READ)
-			{
-				err = ata_channel_wait(chan);
-				if (err != 0)
-					return err;
-				pio_xfer_in(chan, buf, 512);
-
-			}
-			else
-			{
-				pio_xfer_out(chan, buf, 512);
-
-				err = ata_channel_wait(chan);
-				if (err != 0)
-					return err;
-			}
-			buf += 512;
-			done++;
+				memcpy(buf, chan->dma_buf, do_sects * 512);
+			
+			done += do_sects;
+			
+			dma_xfer_finish(chan);
 		}
+		else
+		{
+			for(i=0;i<do_sects;i++)
+			{
+				if (rw == ATA_RW_READ)
+				{		
+					err = ata_channel_wait(chan);
+					if (err != 0)
+						return err;
+					
+					pio_xfer_in(chan, buf, 512);
+
+				}
+				else
+				{
+					pio_xfer_out(chan, buf, 512);
+
+					err = ata_channel_wait(chan);
+					if (err != 0)
+						return err;
+				}
+				buf += 512;
+				done++;
+			}
+		}
+		
 		off += done;
 	}
 
 	return done;
 }
 
-ssize_t pata_read(struct ata_channel * chan, uint8_t device, void * dest, size_t len, loff_t off)
+static ssize_t pata_read(struct storage * storage, void * buf, size_t size, loff_t off)
 {
-	return pata_do_rw(chan, device, dest, len, off, ATA_RW_READ);
+	ssize_t err;
+	int dev;
+	struct ata_channel * chan = storage->dataptr;
+	
+	/* Blokujemy kanał */
+	mutex_lock(&chan->mutex);
+	dev = ata_id2dev(chan, storage->devid);
+	if (dev < 0)
+		err = -ENODEV;
+	else
+		err = pata_do_rw(chan, dev, buf, size, off, ATA_RW_READ);
+	mutex_unlock(&chan->mutex);
+	
+	return err;
 }
 
-ssize_t pata_write(struct ata_channel * chan, uint8_t device, void * dest, size_t len, loff_t off)
+static ssize_t pata_write(struct storage * storage, void * buf, size_t size, loff_t off)
 {
-	return pata_do_rw(chan, device, dest, len, off, ATA_RW_WRITE);
+	ssize_t err;
+	int dev;
+	struct ata_channel * chan = storage->dataptr;
+	
+	/* Blokujemy kanał */
+	mutex_lock(&chan->mutex);
+	dev = ata_id2dev(chan, storage->devid);
+	if (dev < 0)
+		err = -ENODEV;
+	else
+		err = pata_do_rw(chan, dev, buf, size, off, ATA_RW_WRITE);
+	mutex_unlock(&chan->mutex);
+	
+	return err;
 }
+
+struct storage_ops __pata_ops = 
+{
+	.open = NULL,
+	.close = NULL,
+	.read = pata_read,
+	.write = pata_write,
+	.ioctl = NULL
+};

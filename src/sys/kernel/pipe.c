@@ -29,7 +29,7 @@
 #include <lib/string.h>
 #include <lib/math.h>
 
-/* TODO: Potoki nazwane */
+/* TODO: Przepisać kod! */
 struct pipe
 {
 	/* Kolejka danych FIFO */
@@ -52,7 +52,7 @@ static int pipe_open(struct vnode * vnode)
 	wait_init(&pipe->wr_wait);
 	vnode->data = pipe;
 
-	//kprintf("pipe_open(%x)\n", vnode);
+	kprintf("pipe_open(%x)\n", vnode);
 	//kprintf("pipe=%x\n", pipe);
 	
 	vnode->mode = S_IFIFO | 0666;
@@ -71,6 +71,8 @@ static int pipe_open(struct vnode * vnode)
 static int pipe_close(struct vnode * vnode)
 {
 	struct pipe * pipe = vnode->data;	
+	
+	kprintf("pipe_close(%x)\n", vnode);
 	kfree(pipe);
 	
 	return 0;
@@ -92,10 +94,13 @@ static ssize_t pipe_read(struct vnode * vnode, void * buf, size_t len, loff_t of
 			if ((atomic_get(&vnode->refcount) < 2) || (done > 0))
 				break;
 			
+			spinlock_unlock(&pipe->lock);
+			//schedule();
+			spinlock_lock(&pipe->lock);
 			/* Budzimy pisarza */
-			kprintf("pipe_read(): sleep, done=%d\n", done);
-			wait_wakeup(&pipe->wr_wait);
-			wait_sleep(&pipe->rd_wait, &pipe->lock);
+			//kprintf("pipe_read(): sleep, done=%d\n", done);
+			//wait_wakeup(&pipe->wr_wait);
+			//wait_sleep(&pipe->rd_wait, &pipe->lock);
 			continue;
 		}
 		*ptr = pipe->buf[pipe->out_ptr];
@@ -127,10 +132,15 @@ static ssize_t pipe_write(struct vnode * vnode, void * buf, size_t len, loff_t o
 			if (atomic_get(&vnode->refcount) < 2)
 				break;
 			
+			spinlock_unlock(&pipe->lock);
+			//schedule();
+			spinlock_lock(&pipe->lock);
+			
 			/* Budzimy czytacza */
-			wait_wakeup(&pipe->rd_wait);
+			//wait_wakeup(&pipe->rd_wait);
+		
 			/* Usypiamy */
-			wait_sleep(&pipe->wr_wait, &pipe->lock);
+			//wait_sleep(&pipe->wr_wait, &pipe->lock);
 			continue;
 		}
 

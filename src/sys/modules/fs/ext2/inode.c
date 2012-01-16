@@ -256,15 +256,15 @@ int inode_unlink(struct vnode * vnode, char * name)
 			err = inode_write_content(vnode, buf, blocks, 0);
 			if (err > 0)
 				err = 0;
-			break;
-			
+
+			goto end;
 		}
 		
 		pos += entry->rec_len;
 		prev = entry;
 	}
 	
-	
+	err = -ENOENT;
 
 end:
 	kfree(buf);
@@ -408,7 +408,7 @@ int32_t inode_write_content(struct vnode * vnode, void * buf, uint32_t blocks, u
 			err = block_alloc(data, &inode->i_block[idx], EXT2_GET_INODE_GROUP(data, vnode->ino));
 			if (err == -ENOSPC)
 			{
-				TODO("alloc in other group");
+				err = block_alloc(data, &inode->i_block[idx], -1);
 			}
 			
 			if (err < 0)
@@ -430,6 +430,7 @@ int32_t inode_write_content(struct vnode * vnode, void * buf, uint32_t blocks, u
 	/* Czy są jakieś bloki niebezposrednie */
 	if (blocks > 0)
 	{
+		TODO("write indirect blocks");
 		return -ENOSYS;
 	}
 	

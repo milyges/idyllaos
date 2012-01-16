@@ -1,0 +1,3 @@
+
+MOD_SOURCES=null.c
+TARGET=null.ko
