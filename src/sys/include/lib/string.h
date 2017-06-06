@@ -24,6 +24,7 @@
 void * memcpy(void * dst, void * src, size_t n);
 void * memset(void * dst, int c, size_t len);
 void * memsetw(void * s, uint16_t c, int n);
+int memcmp(void * p1, void * p2, int len);
 
 int strcmp(const char * s1, const char * s2);
 char * strcpy(char * dst, const char * src);

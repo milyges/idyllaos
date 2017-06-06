@@ -1,6 +1,6 @@
 diff -Naur gcc-4.5.0.orig//config.sub gcc-4.5.0/config.sub
 --- gcc-4.5.0.orig//config.sub	2010-03-23 15:26:40.000000000 +0100
-+++ gcc-4.5.0/config.sub	2010-05-11 14:14:54.000000000 +0200
++++ gcc-4.5.0/config.sub	2012-01-17 11:37:43.000000000 +0100
 @@ -1315,7 +1315,7 @@
  	      | -os2* | -vos* | -palmos* | -uclinux* | -nucleus* \
  	      | -morphos* | -superux* | -rtmk* | -rtmk-nova* | -windiss* \
@@ -12,7 +12,7 @@ diff -Naur gcc-4.5.0.orig//config.sub gcc-4.5.0/config.sub
  	-qnx*)
 diff -Naur gcc-4.5.0.orig//gcc/config/i386/idyllaos32.h gcc-4.5.0/gcc/config/i386/idyllaos32.h
 --- gcc-4.5.0.orig//gcc/config/i386/idyllaos32.h	1970-01-01 01:00:00.000000000 +0100
-+++ gcc-4.5.0/gcc/config/i386/idyllaos32.h	2010-05-11 14:17:45.000000000 +0200
++++ gcc-4.5.0/gcc/config/i386/idyllaos32.h	2012-01-17 11:37:43.000000000 +0100
 @@ -0,0 +1,16 @@
 +/* Definitions for IdyllaOS i386 targets
 +   Copyright (C) 2010 IdyllaOS Team
@@ -32,7 +32,7 @@ diff -Naur gcc-4.5.0.orig//gcc/config/i386/idyllaos32.h gcc-4.5.0/gcc/config/i38
 +    %{static:-static}}" 
 diff -Naur gcc-4.5.0.orig//gcc/config/i386/idyllaos64.h gcc-4.5.0/gcc/config/i386/idyllaos64.h
 --- gcc-4.5.0.orig//gcc/config/i386/idyllaos64.h	1970-01-01 01:00:00.000000000 +0100
-+++ gcc-4.5.0/gcc/config/i386/idyllaos64.h	2010-05-11 14:17:28.000000000 +0200
++++ gcc-4.5.0/gcc/config/i386/idyllaos64.h	2012-01-17 11:37:43.000000000 +0100
 @@ -0,0 +1,16 @@
 +/* Definitions for IdyllaOS x86-64 targets
 +   Copyright (C) 2010, Idylla OS Team
@@ -50,23 +50,9 @@ diff -Naur gcc-4.5.0.orig//gcc/config/i386/idyllaos64.h gcc-4.5.0/gcc/config/i38
 +      %{!m32:%{!dynamic-linker:-dynamic-linker /lib64/ld.so}}} \
 +      %{m32:%{!dynamic-linker:-dynamic-linker /lib32/ld.so}} \
 +    %{static:-static}}"
-diff -Naur gcc-4.5.0.orig//gcc/config/idyllaos.h gcc-4.5.0/gcc/config/idyllaos.h
---- gcc-4.5.0.orig//gcc/config/idyllaos.h	1970-01-01 01:00:00.000000000 +0100
-+++ gcc-4.5.0/gcc/config/idyllaos.h	2010-05-11 14:19:25.000000000 +0200
-@@ -0,0 +1,10 @@
-+/* Definitions for IdyllaOS targets
-+   Copyright (C) 2010, IdyllaOS Team
-+*/
-+
-+/* Specify predefined symbols in preprocessor.  */
-+#undef  TARGET_OS_CPP_BUILTINS
-+#define TARGET_OS_CPP_BUILTINS()		\
-+	do {					\
-+		builtin_define ("__IDYLLAOS__");	\
-+	} while (0)
 diff -Naur gcc-4.5.0.orig//gcc/config/i386/t-idyllaos64 gcc-4.5.0/gcc/config/i386/t-idyllaos64
 --- gcc-4.5.0.orig//gcc/config/i386/t-idyllaos64	1970-01-01 01:00:00.000000000 +0100
-+++ gcc-4.5.0/gcc/config/i386/t-idyllaos64	2010-05-11 14:18:40.000000000 +0200
++++ gcc-4.5.0/gcc/config/i386/t-idyllaos64	2012-01-17 11:37:43.000000000 +0100
 @@ -0,0 +1,17 @@
 +MULTILIB_OPTIONS = m64/m32
 +MULTILIB_DIRNAMES = 64 32
@@ -85,9 +71,40 @@ diff -Naur gcc-4.5.0.orig//gcc/config/i386/t-idyllaos64 gcc-4.5.0/gcc/config/i38
 +
 +# Compile libgcc2.a with pic.
 +TARGET_LIBGCC2_CFLAGS = -fPIC 
+diff -Naur gcc-4.5.0.orig//gcc/config/idyllaos.h gcc-4.5.0/gcc/config/idyllaos.h
+--- gcc-4.5.0.orig//gcc/config/idyllaos.h	1970-01-01 01:00:00.000000000 +0100
++++ gcc-4.5.0/gcc/config/idyllaos.h	2012-01-17 12:28:13.000000000 +0100
+@@ -0,0 +1,27 @@
++/* Definitions for IdyllaOS targets
++   Copyright (C) 2010, IdyllaOS Team
++*/
++
++/* Specify predefined symbols in preprocessor.  */
++#undef  TARGET_OS_CPP_BUILTINS
++#define TARGET_OS_CPP_BUILTINS()		\
++	do {					\
++		builtin_define ("__IDYLLAOS__");	\
++	} while (0)
++
++#undef STARTFILE_SPEC
++#define STARTFILE_SPEC \
++    "%{!shared: %{!pg:crt0.o%s}} \
++    crti.o%s crtbegin.o%s"
++    
++#undef ENDFILE_SPEC
++#define ENDFILE_SPEC \
++    "crtend.o%s crtn.o%s"
++    
++#undef CPLUSPLUS_CPP_SPEC
++#define CPLUSPLUS_CPP_SPEC "-D_GNU_SOURCE %(cpp)"
++
++
++
++
++    
 diff -Naur gcc-4.5.0.orig//gcc/config.gcc gcc-4.5.0/gcc/config.gcc
 --- gcc-4.5.0.orig//gcc/config.gcc	2010-04-07 12:34:00.000000000 +0200
-+++ gcc-4.5.0/gcc/config.gcc	2010-05-11 14:23:06.000000000 +0200
++++ gcc-4.5.0/gcc/config.gcc	2012-01-17 11:37:43.000000000 +0100
 @@ -609,6 +609,14 @@
    default_use_cxa_atexit=yes
    use_gcc_stdint=wrap
@@ -120,7 +137,7 @@ diff -Naur gcc-4.5.0.orig//gcc/config.gcc gcc-4.5.0/gcc/config.gcc
  	;;
 diff -Naur gcc-4.5.0.orig//libgcc/config.host gcc-4.5.0/libgcc/config.host
 --- gcc-4.5.0.orig//libgcc/config.host	2010-04-02 05:02:18.000000000 +0200
-+++ gcc-4.5.0/libgcc/config.host	2010-05-11 14:24:05.000000000 +0200
++++ gcc-4.5.0/libgcc/config.host	2012-01-17 11:37:43.000000000 +0100
 @@ -282,6 +282,10 @@
  	;;
  x86_64-*-freebsd*)
@@ -134,7 +151,7 @@ diff -Naur gcc-4.5.0.orig//libgcc/config.host gcc-4.5.0/libgcc/config.host
  i[34567]86-*-netbsd*)
 diff -Naur gcc-4.5.0.orig//libstdc++-v3/crossconfig.m4 gcc-4.5.0/libstdc++-v3/crossconfig.m4
 --- gcc-4.5.0.orig//libstdc++-v3/crossconfig.m4	2009-06-02 21:15:03.000000000 +0200
-+++ gcc-4.5.0/libstdc++-v3/crossconfig.m4	2010-05-11 14:25:20.000000000 +0200
++++ gcc-4.5.0/libstdc++-v3/crossconfig.m4	2012-01-17 11:37:43.000000000 +0100
 @@ -150,6 +150,49 @@
      GCC_CHECK_TLS
      AM_ICONV

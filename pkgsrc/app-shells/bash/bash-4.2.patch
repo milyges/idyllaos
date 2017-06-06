@@ -1,0 +1,12 @@
+diff -Naur bash-4.2.orig/support/config.sub bash-4.2/support/config.sub
+--- bash-4.2.orig/support/config.sub	2009-11-19 19:43:37.000000000 +0100
++++ bash-4.2/support/config.sub	2011-09-14 21:05:17.000000000 +0200
+@@ -1265,7 +1265,7 @@
+ 	      | -os2* | -vos* | -palmos* | -uclinux* | -nucleus* \
+ 	      | -morphos* | -superux* | -rtmk* | -rtmk-nova* | -windiss* \
+ 	      | -powermax* | -dnix* | -nx6 | -nx7 | -sei* | -dragonfly* \
+-	      | -skyos* | -haiku* | -rdos* | -toppers* | -drops*)
++	      | -skyos* | -haiku* | -rdos* | -toppers* | -drops* | -idyllaos*)
+ 	# Remember, each alternative MUST END IN *, to match a version number.
+ 		;;
+ 	-qnx*)

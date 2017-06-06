@@ -47,7 +47,7 @@ mbheader:
 #ifdef __CONFIG_ENABLE_PAE
 #define PG_ITEM_SIZE 8
 #else
-#define PG_ITEM_SIZE 4
+
 #endif
 
 _start: /* Bootloader oddaje kontrolę tutaj, baardzo wczesna inicjalizacja */

@@ -36,7 +36,7 @@ typedef int32_t off_t; /* Offset (32bitowy), przy plikach do 2GiB */
 typedef int64_t loff_t; /* Offset (64bitowy), przy operacjach na dużych plikach */
 typedef int32_t blksize_t; /* Rozmiar bloku */
 typedef int32_t blkcnt_t; /* Ilość bloków */
-typedef uint64_t time_t; /* Czas */
+typedef unsigned long time_t; /* Czas */
 typedef int32_t pid_t; /* Identyfikator procesu */
 typedef int32_t tid_t; /* Identyfikator wątku */
 typedef unsigned long size_t; /* Rozmiary obiektów */

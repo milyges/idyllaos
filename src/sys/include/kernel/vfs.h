@@ -124,8 +124,8 @@
 #define SYMLOOP_MAX        32
 #define PIPE_SIZE          0x1000
 
-#define VNODE_HOLD(x)      atomic_inc(&(x)->refcount)
-#define VNODE_REL(x)       atomic_dec(&(x)->refcount)
+#define VNODE_HOLD(x)      atomic_inc(&((struct vnode *)(x))->refcount)
+#define VNODE_REL(x)       atomic_dec(&((struct vnode *)(x))->refcount)
 
 #include <arch/atomic.h>
 #include <kernel/types.h>
@@ -203,10 +203,13 @@ struct file
 	struct mutex mutex;
 	atomic_t refs;
 
-	struct vnode * vnode;
 	int flags;
 	int mode;
 	loff_t pos;
+	
+	mode_t type;
+	struct vnode * vnode;
+	void * dataptr;
 };
 
 struct vnode_ops
@@ -221,7 +224,7 @@ struct vnode_ops
 	int (*symlink)(struct vnode * vnode, char * name, char * path);
 	int (*readlink)(struct vnode * vnode, char * buf, size_t len);
 	int (*getdents)(struct vnode * vnode, struct dirent * dirp, size_t len, loff_t * offset);
-	int (*sync)(struct vnode * vnode);
+	int (*flush)(struct vnode * vnode);
 	int (*mknod)(struct vnode * vnode, char * name, mode_t mode, dev_t rdev, uid_t uid, gid_t gid);
 	int (*unlink)(struct vnode * vnode, char * name);
 };
@@ -267,6 +270,11 @@ struct stat
 	time_t st_mtime;
 	time_t st_ctime;
 };
+
+int pipe_stat(struct file * file, struct stat * stat);
+ssize_t pipe_read(struct file * file, void * buf, size_t bufsz);
+ssize_t pipe_write(struct file * file, void * buf, size_t bufsz);
+int pipe_free(struct file * file);
 
 int fs_register(struct filesystem * fs);
 int fs_unregister(struct filesystem * fs);

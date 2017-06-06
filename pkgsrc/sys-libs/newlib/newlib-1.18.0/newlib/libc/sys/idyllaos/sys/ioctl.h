@@ -19,7 +19,21 @@
 #ifndef __SYS_IOCTL_H
 #define __SYS_IOCTL_H
 
-#warning "This file is stub!"
+/* Urządzenie sieciowe */
+#define NETDEV_IOCTL_SETIPV4      0x01
+#define NETDEV_IOCTL_SETMASK      0x02
+#define NETDEV_IOCTL_SETBROADCAST 0x03
+#define NETDEV_IOCTL_GETIPV4      0x04
+#define NETDEV_IOCTL_GETMASK      0x05
+#define NETDEV_IOCTL_GETBROADCAST 0x06
+#define NETDEV_IOCTL_GETFLAGS     0x07
+#define NETDEV_IOCTL_SETFLAGS     0x08
+#define NETDEV_IOCTL_GETHWTYPE    0x09
+#define NETDEV_IOCTL_GETHWADDR    0x0A
+#define NETDEV_IOCTL_GETTXBYTES   0x0B
+#define NETDEV_IOCTL_GETRXBYTES   0x0C
+#define NETDEV_IOCTL_GETMTU       0x0D
+#define NETDEV_IOCTL_SETMTU       0x0E
 
 int ioctl(int fd, int request, ...);
 

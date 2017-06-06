@@ -280,7 +280,8 @@ static int elf32_ph_load(int fd, Elf32_Phdr * seg, struct vm_space * vmspace)
 
 	off = seg->p_offset - (seg->p_vaddr - addr);
 	lenfile = ROUND_UP((seg->p_vaddr - addr) + seg->p_filesz, PAGE_SIZE);
-
+	lenmem = ROUND_UP(seg->p_memsz, PAGE_SIZE) - lenfile;
+	
 	//kprintf("elf32_execve: vaddr=%x, offset=%x, filesz=%x, memsz=%x\n", seg->p_vaddr, seg->p_offset, seg->p_filesz, seg->p_memsz);
 	if (lenfile > 0)
 	{
@@ -299,11 +300,11 @@ static int elf32_ph_load(int fd, Elf32_Phdr * seg, struct vm_space * vmspace)
 		sched_preempt_enable();
 	}
 
-	lenmem = ROUND_UP(seg->p_memsz, PAGE_SIZE) - lenfile;
+	
 	if (lenmem > 0)
 	{
-		//kprintf(" -> mmap anon: addr=%x, len=%x\n", addr + lenfile, lenmem);
-		vm_mmap((void *)addr + lenfile, lenmem, prot | MAP_ANONYMOUS, 0, 0, vmspace, NULL);
+	//	kprintf(" -> mmap anon: addr=%x, len=%x\n", addr + lenfile, lenmem);
+		vm_mmap((void *)addr + lenfile, lenmem, prot | MAP_FIXED | MAP_ANONYMOUS, -1, 0, vmspace, NULL);
 	}
 
 	return 0;
@@ -361,9 +362,9 @@ int elf32_execve(int fd, struct vm_space * vmspace, void ** entry, Elf32_Ehdr * 
 			case PT_PHDR: break;
 			default:
 			{
-				//kprintf(KERN_DEBUG"elf32: unexpected segment (type=%u)\n", seg->p_type);
-				err = -ENOEXEC;
-				goto end;
+				kprintf(KERN_DEBUG"elf32: unexpected segment (type=%u)\n", seg->p_type);
+				//err = -ENOEXEC;
+				//goto end;
 			}
 		}
 	}

@@ -21,7 +21,8 @@ GENERAL_SOURCES = \
 	getlogin.c gethostname.c mknod.c mkfifo.c pipe.c getppid.c getuid.c geteuid.c getgid.c \
 	getegid.c alarm.c setuid.c setgid.c getpwent.c getgrent.c vfork.c mount.c umount.c \
 	nanosleep.c sigaction.c uname.c sigprocmask.c setpgrp.c getpgrp.c sethostname.c kctl.c \
-	times.c time.c stime.c
+	times.c time.c stime.c symlink.c accept.c bind.c connect.c listen.c recv.c recvfrom.c \
+	send.c sendto.c shutdown.c socket.c
 
 ADD_OBJS = \
 	$(IDYLLAOS_MACH_LIB)

@@ -32,6 +32,8 @@
 struct scheduler * __scheds[CPUS_MAX];
 static LIST_NEW(_ready_queue);
 static SPINLOCK_NEW(_ready_queue_lock);
+static LIST_NEW(_sleep_queue);
+static SPINLOCK_NEW(_sleep_queue_lock);
 
 /* Proces kernela (rodzic wątków IDLE, nie widoczny normalnie) */
 static struct proc _kernel_proc =
@@ -136,6 +138,8 @@ void sched_init(int cpuid)
 	memset(thread, 0, sizeof(struct thread));
 	list_init(&thread->list);
 	list_init(&thread->t_list);
+	list_init(&thread->s_list);
+	
 	thread->proc = &_kernel_proc;
 	thread->state = THREAD_STATE_RUNNING;
 	thread->timeout = 1;

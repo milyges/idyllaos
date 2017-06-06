@@ -64,7 +64,8 @@ int block_alloc(struct ext2_data * data, uint32_t * block, int group)
 	unsigned long * buf;
 	uint32_t free_blocks = 0;
 	
-	if (group < 0)
+	/* Jeśli opdana grupa nie ma wolnych bloków to szukamy gdzie są */
+	if (!data->groups[group].bg_free_blocks_count)
 	{
 		for(i = 0; i < data->groups_count; i++)
 		{
@@ -75,9 +76,6 @@ int block_alloc(struct ext2_data * data, uint32_t * block, int group)
 			}
 		}
 	}
-	
-	/* Blokujemy daną grupę */
-	EXT2_GROUP_LOCK(data, group);
 
 	/* Sprawdzamy czy są w niej w ogóle jakieś wolne bloki */
 	if (!data->groups[group].bg_free_blocks_count)
@@ -86,6 +84,9 @@ int block_alloc(struct ext2_data * data, uint32_t * block, int group)
 		goto end;
 	}
 
+	/* Blokujemy daną grupę */
+	EXT2_GROUP_LOCK(data, group);
+	
 	/* Ładujemy bitmape blokow do pamieci */
 	buf = kalloc(data->blk_size);
 	err = block_bitmap_read(data, buf, group);

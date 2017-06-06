@@ -36,6 +36,7 @@ void thread_init(struct thread * thread, struct proc * parent)
 	memset(thread, 0, sizeof(struct thread));
 	list_init(&thread->list);
 	list_init(&thread->t_list);
+	list_init(&thread->s_list);
 	thread->proc = parent;
 	thread->state = THREAD_STATE_NEW;
 }

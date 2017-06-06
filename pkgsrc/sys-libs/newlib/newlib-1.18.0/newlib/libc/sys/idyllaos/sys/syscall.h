@@ -88,6 +88,18 @@ extern "C" {
 #define SYS_TIMES         56
 #define SYS_TIME          57
 #define SYS_STIME         58
+#define SYS_SYMLINK       59
+#define SYS_ACCEPT        60
+
+#define SYS_BIND          61
+#define SYS_CONNECT       62
+#define SYS_LISTEN        63
+#define SYS_RECV          64
+#define SYS_RECVFROM      65
+#define SYS_SEND          66
+#define SYS_SENDTO        67
+#define SYS_SHUTDOWN      68
+#define SYS_SOCKET        69
 
 #ifdef __cplusplus
 }

@@ -57,13 +57,15 @@ int vm_mmap(void * start, size_t length, uint16_t flags, int fd, loff_t offset, 
 
 	if ((flags & MAP_ANONYMOUS) != MAP_ANONYMOUS)
 		file = SCHED->current->proc->filedes[fd]->file;
-
+	//kprintf("vm_mmap(%x, %x, %x, %d, %llx), pid=%d\n", start, length, flags, fd, offset, SCHED->current->proc->pid);
+	
 	mutex_lock(&vmspace->mutex);
 
 	/* Alokujemy nowy blok */
 	block = sma_alloc(vmspace->area, (addr_t)start, length, (flags & MAP_FIXED) ? SMA_ALLOC_FIXED : 0);
 	if (!block)
 	{
+ 		kprintf("mmap(): out of memory\n");
 		mutex_unlock(&vmspace->mutex);
 		return -ENOMEM;
 	}
@@ -77,7 +79,8 @@ int vm_mmap(void * start, size_t length, uint16_t flags, int fd, loff_t offset, 
 	region->size = block->size;
 	region->pages = kalloc(sizeof(struct vm_page *) * (block->size / PAGE_SIZE));
 	memset(region->pages, 0, sizeof(struct vm_page *) * (block->size / PAGE_SIZE));
-	if (file)
+	
+	if ((file) && (file->vnode))
 	{
 		VNODE_HOLD(file->vnode);
 		region->vnode = file->vnode;
@@ -101,6 +104,7 @@ int vm_mmap(void * start, size_t length, uint16_t flags, int fd, loff_t offset, 
 	if (err != 0)
 	{
 		/* TODO: Zwolnij pamięć */
+		TODO("free memory");
 		mutex_unlock(&vmspace->mutex);
 		return err;
 	}

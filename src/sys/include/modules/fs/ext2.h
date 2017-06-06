@@ -58,6 +58,9 @@
 
 #define EXT2_SUPERBLOCK_SECTOR        2
 
+#define EXT2_RW_READ                  0
+#define EXT2_RW_WRITE                 1
+
 #define EXT2_BLOCK_SIZE(sb)           (1024 << ((struct ext2_superblock *)sb)->s_log_block_size)
 #define EXT2_GET_SECTOR_NUM(d,b)      ((b) * ((struct ext2_data *)d)->spb)
 #define EXT2_INODE_BLOCKS(d,b)        (((b) * 512) / ((struct ext2_data *)d)->blk_size)
@@ -190,8 +193,7 @@ int inode_read(struct vnode * vnode);
 int inode_write(struct vnode * vnode);
 int inode_link(struct vnode * vnode, char * name, ino_t ino_num, struct ext2_inode * inode, int type);
 int inode_unlink(struct vnode * vnode, char * name);
-int32_t inode_read_content(struct vnode * vnode, void * buf, uint32_t blocks, uint32_t start);
-int32_t inode_write_content(struct vnode * vnode, void * buf, uint32_t blocks, uint32_t start);
+int32_t inode_rw_content(struct vnode * vnode, void * buf, uint32_t blocks, uint32_t start, int rw);
 
 /* Z pliku ialloc.c */
 int inode_alloc(struct ext2_data * data, ino_t * ino, int group);

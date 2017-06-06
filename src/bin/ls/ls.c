@@ -259,8 +259,8 @@ int main(int argc, char * argv[])
 {	
 	int option, i;
 	
-	if (!isatty(1))
-		mode = LS_MODE_SINGLE;
+	//if (!isatty(1))
+	//	mode = LS_MODE_SINGLE;
 	
 	while((option = getopt(argc, argv, "1lahinC")) != -1)
 	{

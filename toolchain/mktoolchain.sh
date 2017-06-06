@@ -2,10 +2,11 @@
 
 # Skrypt wykorzystywany do budowania Toolchaina
 
-BINUTILS_VERSION="2.20.1"
-GCC_VERSION="4.5.0"
+BINUTILS_VERSION="2.22"
+GCC_VERSION="4.5.3"
 NEWLIB_VERSION="1.18.0"
 NCURSES_VERSION="5.7"
+GMP_VERSION="5.0.2"
 
 # Jezeli pracujemy pod Idylla i architektóry się zgadzają, nie ma co budować toolchaina
 if [ "$(uname -s)" = "IdyllaOS" ] && [ "${IDYLLAOS_ARCH}" = "$(uname -m)" ];
@@ -98,6 +99,27 @@ build_ncurses()
 	make libs && \
 	make install.libs install.includes
 }
+
+# build_gpm()
+# {
+# 	getfile "http://ftp.gnu.org/gnu/gmp/gmp-${GMP_VERSION}.tar.gz" "gmp-${GMP_VERSION}.tar.gz" && \
+# 	export CC_FOR_BUILD=gcc && \
+# 	export CPP_FOR_BUILD=cpp && \
+# 	BUILDDIR="${TMPDIR}/build-gmp" && \
+# 	mkdir -p ${BUILDDIR} && \
+# 	echo "Extracting sources from gmp-${GMP_VERSION}.tar.gz..." && \
+# 	rm -rf ${SRCDIR} && \
+# 	tar xzf "${TMPDIR}/gmp-${GMP_VERSION}.tar.gz" -C "${TMPDIR}" && \
+# 	echo "Patching sources:" && \
+# 	patch -d ${SRCDIR} -p1 < "${IDYLLAOS_PKGSRC}/sys-libs/ncurses/ncurses-${NCURSES_VERSION}.patch" && \
+# 	echo "Building sources" && \
+# 	cd ${BUILDDIR}
+# 	${SRCDIR}/configure --prefix=${PREFIX} --disable-nls --prefix=${PREFIX}/${IDYLLAOS_ARCH}-pc-idyllaos \
+# 	--without-cxx --without-cxx-binding --datadir=/usr/share --sysconfdir=/etc --host=${IDYLLAOS_ARCH}-pc-idyllaos \
+# 	--build=${BUILD}
+# 	make libs && \
+# 	make install.libs install.includes
+# }
 
 BUILD_GCC=0
 BUILD_BINUTILS=0

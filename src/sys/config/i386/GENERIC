@@ -17,21 +17,21 @@ option KSTACK_SIZE 0x1000
 #option ENABLE_PAE
 
 # Obsługa LocalAPIC (wymagane do SMP)
-option ENABLE_APIC
+#option ENABLE_APIC
 
 # Obsługa SMP
-option ENABLE_SMP
+#option ENABLE_SMP
 
 # Ilość obsługiwanych CPU
 option CPUS_MAX    8
 
 # Obsługa I/O APIC
-option ENABLE_IOAPIC
+#option ENABLE_IOAPIC
 
 # Częstotliwość dla PIT
-option TIMER_HZ    100
-#option TIMER_HZ   250
-#option TIMER_HZ   500
+#option TIMER_HZ    100
+option TIMER_HZ   250
+#option TIMER_HZ   300
 #option TIMER_HZ   1000
 
 # Włącz monitor v86
@@ -48,5 +48,7 @@ module drivers/storage/ata
 module drivers/char/tty
 module drivers/char/null
 module drivers/display/vbe
+module drivers/net/rl8139
 module fs/ext2
 module fs/ramfs
+module net

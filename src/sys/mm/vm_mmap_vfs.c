@@ -71,7 +71,7 @@ static struct vm_page * vm_mmap_vfs_getpage(struct vm_mapping * mapping, off_t o
 			kfree(page);
 			return NULL;
 		}
-
+		
 		err = mapping->region->vnode->ops->read(mapping->region->vnode, (void *)(mapping->block->start + offset), PAGE_SIZE, mapping->region->offset + offset);
 		if (err < 0)
 		{

@@ -63,6 +63,7 @@ static ssize_t storage_read(struct bdev * bdev, dev_t dev, void * buf, size_t le
 	}
 	
 	return storage_buffer_rw(storage, buf, len, off, STORAGE_RW_READ);
+	//return storage->ops->read(storage, buf, len, off);
 }
 
 static ssize_t storage_write(struct bdev * bdev, dev_t dev, void * buf, size_t len, loff_t off)
@@ -84,6 +85,7 @@ static ssize_t storage_write(struct bdev * bdev, dev_t dev, void * buf, size_t l
 	}
 	
 	return storage_buffer_rw(storage, buf, len, off, STORAGE_RW_WRITE);
+	//return storage->ops->write(storage, buf, len, off);
 }
 
 static int storage_ioctl(struct bdev * bdev, dev_t dev, int cmd, void * arg)

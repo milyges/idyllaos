@@ -21,10 +21,14 @@
 .extern main
 .extern tzset
 .extern environ
+.extern _init
 
 _start:
 	movl 8(%esp), %eax
 	movl %eax, environ
+
+	/* Sekcja .init */
+	call _init
 
 	/* Inicjujemy informacje o strefie czasowej */
 	call tzset
@@ -38,3 +42,4 @@ _start:
 
 .halt:
 	jmp .halt
+

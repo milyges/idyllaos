@@ -280,7 +280,8 @@ int init(int argc, char * argv[])
 		return -ENODEV;
 	}
 
-	vbe_enable_mode(800, 600, 24);
+	vbe_enable_mode(1024, 768, 24);
+	
 	
 	extern struct vc __vc_boot;
 	__vc_boot.ops = &fb_vc_ops;

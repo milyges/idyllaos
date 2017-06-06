@@ -180,7 +180,7 @@ ssize_t storage_buffer_rw(struct storage * storage, void * buf, size_t len, loff
 		else
 		{
 			memcpy((void *)(buffer->data + (off - buffer->start) * 512), buf, sects * 512);
-			buffer->is_dirty = 1;
+			buffer->is_dirty = 1;			
 		}
 		left -= sects;
 		buf += sects * 512;

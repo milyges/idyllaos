@@ -24,6 +24,7 @@
 #include <kernel/panic.h>
 #include <kernel/debug.h>
 #include <kernel/device.h>
+#include <kernel/socket.h>
 #include <mm/heap.h>
 #include <lib/errno.h>
 #include <lib/string.h>
@@ -515,9 +516,10 @@ int sys_open(char * path, int flags, mode_t mode, struct proc * proc)
 	mutex_init(&file->mutex);
 	atomic_set(&file->refs, 1);
 	file->vnode = vnode;
+	//file->dataptr = NULL;
+	file->type = vnode->mode & S_IFMT;
 	file->mode = flags;
 	file->pos = 0;
-
 
 	filedes = kalloc(sizeof(struct filedes));
 	filedes->flags = 0;
@@ -565,23 +567,36 @@ int sys_close(int fd, struct proc * proc)
 		return -EBADF;
 
 	filedes = proc->filedes[fd];
+	
 	proc->filedes[fd] = NULL;
 
 	atomic_dec(&filedes->file->refs);
 	if (!atomic_get(&filedes->file->refs))
 	{
-		if (S_ISCHR(filedes->file->vnode->mode))
-			cdev_close(filedes->file->vnode->rdev);
-		else if (S_ISBLK(filedes->file->vnode->mode))
-			bdev_close(filedes->file->vnode->rdev);
-		
+		/* Sockety maja inna funkcje */
+		if (S_ISSOCK(filedes->file->type))
+			return sys_shutdown(fd, SHUT_RDRW, proc);
+		else if (S_ISFIFO(filedes->file->type))
+			return pipe_free(filedes->file);
+			
 		vnode = filedes->file->vnode;
-		kfree(filedes->file);
-		VNODE_REL(vnode);
-		vnode_free(vnode);
+		
+		if (vnode)
+		{
+			if (S_ISCHR(filedes->file->type))
+				cdev_close(vnode->rdev);
+			else if (S_ISBLK(filedes->file->type))
+				bdev_close(vnode->rdev);
+		
+			kfree(filedes->file);
+		
+			VNODE_REL(vnode);
+			vnode_free(vnode);
+		}
 	}
 
 	kfree(filedes);
+
 	return 0;
 }
 
@@ -590,7 +605,14 @@ int sys_fstat(int fd, struct stat * stat, struct proc * proc)
 	/* Check file descriptor */
 	if ((fd < 0) || (fd >= OPEN_MAX) || (!proc->filedes[fd]))
 		return -EBADF;
-	do_sys_stat(proc->filedes[fd]->file->vnode, stat);
+	
+	if (S_ISFIFO(proc->filedes[fd]->file->type))
+		return pipe_stat(proc->filedes[fd]->file, stat);
+	else if (proc->filedes[fd]->file->vnode)
+		do_sys_stat(proc->filedes[fd]->file->vnode, stat);
+	else
+		return -ENOTSUP;
+	
 	return 0;
 }
 
@@ -627,6 +649,7 @@ ssize_t sys_read(int fd, void * buf, size_t len, struct proc * proc)
 {
 	ssize_t err;
 	struct file * file;
+	struct vnode * vnode;
 	
 	/* Check file descriptor */
 	if ((fd < 0) || (fd >= OPEN_MAX) || (!proc->filedes[fd]))
@@ -636,20 +659,23 @@ ssize_t sys_read(int fd, void * buf, size_t len, struct proc * proc)
 
 	/* Check file mode */
 	if (((file->mode + 1) & _FREAD) != _FREAD)
-		return -EACCES;
-
-	if (S_ISCHR(file->vnode->mode))
-		err = cdev_read(file->vnode->rdev, buf, len);
-	else if (S_ISBLK(file->vnode->mode))
+		return -EACCES;	
+		
+	vnode = file->vnode;
+	if (S_ISFIFO(file->type))
+		err = pipe_read(file, buf, len);
+	else if (S_ISCHR(file->type))
+		err = cdev_read(vnode->rdev, buf, len);
+	else if (S_ISBLK(file->type))
 	{
 		/* Dla urządzeń blokowych potrzebna jest warstwa,
 		 * która zamieni żądania w bajtach na bloki */
 		err = -ENOSYS;
 	}
-	else if (S_ISDIR(file->vnode->mode))
+	else if (S_ISDIR(file->type))
 		err = -EISDIR;
-	else if (file->vnode->ops->read)
-		err = file->vnode->ops->read(file->vnode, buf, len, file->pos);
+	else if ((vnode) && (vnode->ops->read))
+		err = vnode->ops->read(vnode, buf, len, file->pos);
 	else
 		err = -ENOTSUP;
 
@@ -667,38 +693,43 @@ ssize_t sys_write(int fd, void * buf, size_t len, struct proc * proc)
 {
 	ssize_t err;
 	struct file * file;
-
+	struct vnode * vnode;
+	
 	/* Check file descriptor */
 	if ((fd < 0) || (fd >= OPEN_MAX) || (!proc->filedes[fd]))
 		return -EBADF;
 
 	file = proc->filedes[fd]->file;
-
+	
 	/* Check file mode */
 	if (((file->mode + 1) & _FWRITE) != _FWRITE)
 		return -EACCES;
-
+	
 	/* If append mode seek to end file */
 	if (file->mode & _FAPPEND)
 		sys_lseek(fd, 0, SEEK_END, proc);
 
-	if (S_ISCHR(file->vnode->mode))
-		err = cdev_write(file->vnode->rdev, buf, len);
-	else if (S_ISBLK(file->vnode->mode))
+	vnode = file->vnode;
+	
+	if (S_ISFIFO(file->type))
+		err = pipe_write(file, buf, len);
+	else if (S_ISCHR(file->type))
+		err = cdev_write(vnode->rdev, buf, len);
+	else if (S_ISBLK(file->type))
 	{
 		/* Dla urządzeń blokowych potrzebna jest warstwa,
 		 * która zamieni żądania w bajtach na bloki */
 		err = -ENOSYS;
 	}
-	else if (S_ISDIR(file->vnode->mode))
+	else if (S_ISDIR(file->type))
 		err = -EISDIR;
-	else if (file->vnode->ops->write)
+	else if ((vnode) && (vnode->ops->write))
 	{
 		/* Sprawdzamy czy system plikow nie jest tylko do odczytu */
-		if (file->vnode->mp->flags & MS_RDONLY)
+		if (vnode->mp->flags & MS_RDONLY)
 			err = -EROFS;
 		else
-			err = file->vnode->ops->write(file->vnode, buf, len, file->pos);
+			err = vnode->ops->write(vnode, buf, len, file->pos);
 	}
 	else
 		err = -ENOTSUP;
@@ -715,10 +746,16 @@ ssize_t sys_write(int fd, void * buf, size_t len, struct proc * proc)
 
 loff_t sys_lseek(int fd, loff_t off, int whence, struct proc * proc)
 {
+	struct vnode * vnode;
+	
 	/* Check file descriptor */
 	if ((fd < 0) || (fd >= OPEN_MAX) || (!proc->filedes[fd]))
 		return -EBADF;
 
+	vnode = proc->filedes[fd]->file->vnode;
+	if (!vnode)
+		return -ENOTSUP;
+	
 	mutex_lock(&proc->filedes[fd]->file->mutex);
 	switch(whence)
 	{
@@ -736,8 +773,8 @@ loff_t sys_lseek(int fd, loff_t off, int whence, struct proc * proc)
 		}
 		case SEEK_END:
 		{
-			if (off + proc->filedes[fd]->file->vnode->size >= 0)
-				proc->filedes[fd]->file->pos = off + proc->filedes[fd]->file->vnode->size;
+			if (off + vnode->size >= 0)
+				proc->filedes[fd]->file->pos = off + vnode->size;
 			break;
 		}
 		default:
@@ -800,18 +837,23 @@ int sys_getdents(int fd, struct dirent * buf, unsigned count, struct proc * proc
 {
 	int err;
 	struct file * file;
-
+	struct vnode * vnode;
+	
 	/* Check file descriptor */
 	if ((fd < 0) || (fd >= OPEN_MAX) || (!proc->filedes[fd]))
 		return -EBADF;
 
 	file = proc->filedes[fd]->file;
 
-	if (!S_ISDIR(file->vnode->mode))
+	if (!S_ISDIR(file->type))
 		return -ENOTDIR;
 
-	if (file->vnode->ops->getdents)
-		err = file->vnode->ops->getdents(file->vnode, buf, count, &file->pos);
+	vnode = file->vnode;
+	if (!vnode)
+		return -ENOTSUP;
+	
+	if (vnode->ops->getdents)
+		err = vnode->ops->getdents(vnode, buf, count, &file->pos);
 	else
 		err = -ENOTSUP;
 
@@ -822,14 +864,19 @@ int sys_ioctl(int fd, int cmd, void * arg, struct proc * proc)
 {
 	int err;
 	struct file * file;
-
+	struct vnode * vnode;
+	
 	/* Check file descriptor */
 	if ((fd < 0) || (fd >= OPEN_MAX) || (!proc->filedes[fd]))
 		return -EBADF;
 	file = proc->filedes[fd]->file;
 
-	if (S_ISCHR(file->vnode->mode))
-		err = cdev_ioctl(file->vnode->rdev, cmd, arg);
+	vnode = file->vnode;
+	if (!vnode)
+		return -ENOTSUP;
+	
+	if (S_ISCHR(file->type))
+		err = cdev_ioctl(vnode->rdev, cmd, arg);
 	else
 		err = -ENOTSUP;
 
@@ -1021,8 +1068,8 @@ int sys_chmod(char * path, mode_t mode, struct proc * proc)
 	}
 
 	vnode->mode = (vnode->mode & S_IFMT) | mode;
-	if (vnode->ops->sync)
-		vnode->ops->sync(vnode);
+	if (vnode->ops->flush)
+		vnode->ops->flush(vnode);
 
 	VNODE_REL(vnode);
 	return 0;
@@ -1092,7 +1139,7 @@ int sys_unlink(char * path, struct proc * proc)
 		VNODE_REL(vnode);
 		return -EROFS;
 	}
-
+	
 	/* Sprawdzamy czy obiekt nie jest katalogiem */
 	if (S_ISDIR(vnode->mode))
 	{
@@ -1132,8 +1179,8 @@ int sys_unlink(char * path, struct proc * proc)
 		/* Jeżeli można zwolnoć v-node to go zwalniamy */
 		if ((!vnode->nlink) && (!atomic_get(&vnode->refcount)))
 			vnode_free(vnode);
-		else if (vnode->ops->sync)
-			vnode->ops->sync(vnode);
+		else if (vnode->ops->flush)
+			vnode->ops->flush(vnode);
 	}
 	else
 		VNODE_REL(vnode);
@@ -1157,8 +1204,9 @@ int sys_truncate(const char *path, loff_t length, struct proc * proc)
 int sys_ftruncate(int fd, loff_t length, struct proc * proc)
 {
 	struct file * file;
-
-	TODO("truncate file");
+	struct vnode * vnode;
+	
+	//TODO("truncate file");
 	return -ENOSYS;
 
 	/* Check file descriptor */
@@ -1167,16 +1215,24 @@ int sys_ftruncate(int fd, loff_t length, struct proc * proc)
 
 	file = proc->filedes[fd]->file;
 
+	if (!S_ISREG(file->type))
+		return -ENOTSUP;
+	
+	vnode = file->vnode;
+	if (!vnode)
+		return -ENOTSUP;
+	
 	if (((file->mode + 1) & _FWRITE) != _FWRITE)
 		return -EACCES;
 
 	/* Sprawdzamy czy system plikow nie jest tylko do odczytu */
-	if (file->vnode->mp->flags & MS_RDONLY)
+	if (vnode->mp->flags & MS_RDONLY)
 		return -EROFS;
 
-	file->vnode->size = length;
-	if (file->vnode->ops->sync)
-		file->vnode->ops->sync(file->vnode);
+	
+	vnode->size = length;
+	if (vnode->ops->flush)
+		vnode->ops->flush(vnode);
 
 	return 0;
 }
@@ -1221,82 +1277,6 @@ int sys_fcntl(int fd, int cmd, void * arg, struct proc * proc)
 	}
 
 	return -ENOSYS;
-}
-
-
-int sys_pipe(int fds[2], struct proc * proc)
-{
-	struct filedes * fdw;
-	struct filedes * fdr;
-	int i;
-	struct vnode * vnode;
-	extern struct mountpoint __pipefs_mount;
-
-	vnode = vnode_new(&__pipefs_mount, proc->pid);
-	if (!vnode)
-		return -ENOMEM;
-	/* Tworzymy pliki i deskryptory plikow */
-	fdr = kalloc(sizeof(struct filedes));
-	fdr->flags = 0;
-	fdr->file = kalloc(sizeof(struct file));
-	mutex_init(&fdr->file->mutex);
-	atomic_set(&fdr->file->refs, 1);	
-	fdr->file->vnode = vnode;
- 	fdr->file->flags = 0;
-	fdr->file->mode = O_RDONLY;
-	fdr->file->pos = 0;
-
-	VNODE_HOLD(vnode);
-	fdw = kalloc(sizeof(struct filedes));
-	fdw->flags = 0;
-	fdw->file = kalloc(sizeof(struct file));
-	mutex_init(&fdw->file->mutex);
-	atomic_set(&fdw->file->refs, 1);
-	fdw->file->vnode = vnode;
- 	fdw->file->flags = 0;
-	fdw->file->mode = O_WRONLY;
-	fdw->file->pos = 0;
-
-	/* Dodajemy do listy otwartych plików */
-	for(i = 0; i < OPEN_MAX; i++)
-	{
-		if (!proc->filedes[i])
-		{
-			proc->filedes[i] = fdr;
-			fds[0] = i;
-			break;
-		}
-	}
-
-	if (i == OPEN_MAX)
-		goto err;
-
-	for( ; i < OPEN_MAX; i++)
-	{
-		if (!proc->filedes[i])
-		{
-			proc->filedes[i] = fdw;
-			fds[1] = i;
-			break;
-		}
-	}
-
-	if (i < OPEN_MAX)
-		return 0;
-
-	proc->filedes[fds[0]] = NULL;
-
-err:
-	/* Zwalniamy pamiec */
-	VNODE_REL(vnode);
-	VNODE_REL(vnode);
-	kfree(fdr->file);
-	kfree(fdw->file);
-	kfree(fdr);
-	kfree(fdw);
-	vnode_free(vnode);
-
-	return -EMFILE;
 }
 
 void vfs_free(struct proc * proc)

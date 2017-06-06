@@ -27,6 +27,7 @@
 #include <kernel/vfs.h>
 #include <kernel/hostname.h>
 #include <kernel/kctl.h>
+#include <kernel/socket.h>
 #include <mm/heap.h>
 #include <mm/vmm.h>
 #include <lib/string.h>
@@ -434,7 +435,7 @@ static int _sys_sethostname(char * buf)
 static int _sys_kctl(int cmd, void * arg)
 {
 	if (!IS_IN_USERMEM(arg))
-		return ;
+		return -EFAULT;
 	return sys_kctl(cmd, arg);
 }
 
@@ -459,6 +460,85 @@ static int _sys_stime(time_t * buf)
 	
 	STUB();
 	return -ENOSYS;
+}
+
+int _sys_symlink(const char *oldpath, const char *newpath)
+{
+	STUB();
+	return -ENOSYS;
+}
+
+int _sys_accept(int sockfd, struct sockaddr * sockaddr, socklen_t * socklen)
+{
+	if ((!IS_IN_USERMEM(sockaddr)) || (!IS_IN_USERMEM(socklen)))
+		return -EFAULT;
+	
+	return -ENOSYS;
+}
+
+int _sys_bind(int sockfd, const struct sockaddr * sockaddr, socklen_t socklen)
+{
+	if (!IS_IN_USERMEM(sockaddr))
+		return -EFAULT;
+	
+	return sys_bind(sockfd, (struct sockaddr *)sockaddr, socklen, SCHED->current->proc);
+}
+
+int _sys_connect(int sockfd, struct sockaddr * sockaddr, socklen_t socklen)
+{
+	if (!IS_IN_USERMEM(sockaddr))
+		return -EFAULT;
+	
+	return -ENOSYS;
+}
+
+int _sys_listen(int sockfd, int backlog)
+{
+	STUB();
+	return -ENOSYS;
+}
+
+int _sys_recv(int sockfd, void * buf, size_t bufsz, int flags)
+{
+	if (!IS_IN_USERMEM(buf))
+		return -EFAULT;
+	
+	return -ENOSYS;
+}
+
+int _sys_recv_from(int sockfd, void * buf, size_t bufsz, int flags, void * sockinfo[2])
+{
+	if ((!IS_IN_USERMEM(buf)) || (!IS_IN_USERMEM(sockinfo[0])) || (!IS_IN_USERMEM(sockinfo[1])))
+		return -EFAULT;
+	
+	return sys_recvfrom(sockfd, buf, bufsz, flags, sockinfo[0], sockinfo[1], SCHED->current->proc);
+	
+}
+
+int _sys_send(int sockfd, void * buf, size_t bufsz, int flags)
+{
+	if (!IS_IN_USERMEM(buf))
+		return -EFAULT;
+	
+	return -ENOSYS;
+}
+
+int _sys_sendto(int sockfd, void * buf, size_t bufsz, int flags, void * sockinfo[2])
+{
+	if ((!IS_IN_USERMEM(buf)) || (!IS_IN_USERMEM(sockinfo[0])))
+		return -EFAULT;
+	
+	return sys_sendto(sockfd, buf, bufsz, flags, sockinfo[0], (socklen_t)sockinfo[1], SCHED->current->proc);
+}
+
+int _sys_shutdown(int sockfd, int mode)
+{
+	return sys_shutdown(sockfd, mode, SCHED->current->proc);
+}
+
+int _sys_socket(int domain, int type, int protocol)
+{
+	return sys_socket(domain, type, protocol, SCHED->current->proc);
 }
 
 void * __syscall_table[] =
@@ -521,7 +601,18 @@ void * __syscall_table[] =
 	&_sys_kctl,
 	&_sys_times,
 	&_sys_time,
-	&_sys_stime
+	&_sys_stime,
+	&_sys_symlink,
+	&_sys_accept,
+	&_sys_bind,
+	&_sys_connect,
+	&_sys_listen,
+	&_sys_recv,
+	&_sys_recv_from,
+	&_sys_send,
+	&_sys_sendto,
+	&_sys_shutdown,
+	&_sys_socket
 };
 
 const int __syscall_table_size = sizeof(__syscall_table) / sizeof(void *);

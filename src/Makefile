@@ -25,7 +25,7 @@ vdisk: disk
 	@VBoxManage convertfromraw -format VDI disk.img disk.vdi
 
 qtest: disk
-	@qemu -hda disk.img -m 256 -boot c -smp 1 -s -no-reboot -vga std
+	@qemu-system-x86_64 -hda disk.img -m 256 -boot c -smp 1 -s -no-reboot -vga std -net nic,model=rtl8139 -net tap,ifname=qtap,script=no,downscript=no
 
 all-kernel:
 	@make -C sys all

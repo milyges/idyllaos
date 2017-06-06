@@ -23,7 +23,7 @@ endif #USE_LIBTOOL
 
 include $(srcdir)/../../../../../Makefile.shared
 
-all-local: crt0.o
+all-local: crt0.o crti.o crtn.o
 
 ACLOCAL_AMFLAGS = -I ../../../../.. -I ../../../../../..
 CONFIG_STATUS_DEPENDENCIES = $(newlib_basedir)/configure.host

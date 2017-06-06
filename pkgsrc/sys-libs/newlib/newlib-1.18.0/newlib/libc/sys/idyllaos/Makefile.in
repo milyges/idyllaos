@@ -92,7 +92,12 @@ am__objects_1 = lib_a-chdir.$(OBJEXT) lib_a-close.$(OBJEXT) \
 	lib_a-setpgrp.$(OBJEXT) lib_a-getpgrp.$(OBJEXT) \
 	lib_a-sethostname.$(OBJEXT) lib_a-kctl.$(OBJEXT) \
 	lib_a-times.$(OBJEXT) lib_a-time.$(OBJEXT) \
-	lib_a-stime.$(OBJEXT)
+	lib_a-stime.$(OBJEXT) lib_a-symlink.$(OBJEXT) \
+	lib_a-accept.$(OBJEXT) lib_a-bind.$(OBJEXT) \
+	lib_a-connect.$(OBJEXT) lib_a-listen.$(OBJEXT) \
+	lib_a-recv.$(OBJEXT) lib_a-recvfrom.$(OBJEXT) \
+	lib_a-send.$(OBJEXT) lib_a-sendto.$(OBJEXT) \
+	lib_a-shutdown.$(OBJEXT) lib_a-socket.$(OBJEXT)
 @USE_LIBTOOL_FALSE@am_lib_a_OBJECTS = $(am__objects_1)
 lib_a_OBJECTS = $(am_lib_a_OBJECTS)
 LTLIBRARIES = $(noinst_LTLIBRARIES)
@@ -107,7 +112,9 @@ am__objects_2 = chdir.lo close.lo execve.lo _exit.lo fork.lo fstat.lo \
 	getegid.lo alarm.lo setuid.lo setgid.lo getpwent.lo \
 	getgrent.lo vfork.lo mount.lo umount.lo nanosleep.lo \
 	sigaction.lo uname.lo sigprocmask.lo setpgrp.lo getpgrp.lo \
-	sethostname.lo kctl.lo times.lo time.lo stime.lo
+	sethostname.lo kctl.lo times.lo time.lo stime.lo symlink.lo \
+	accept.lo bind.lo connect.lo listen.lo recv.lo recvfrom.lo \
+	send.lo sendto.lo shutdown.lo socket.lo
 @USE_LIBTOOL_TRUE@am_libidyllaos_la_OBJECTS = $(am__objects_2)
 libidyllaos_la_OBJECTS = $(am_libidyllaos_la_OBJECTS)
 libidyllaos_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
@@ -289,7 +296,8 @@ GENERAL_SOURCES = \
 	getlogin.c gethostname.c mknod.c mkfifo.c pipe.c getppid.c getuid.c geteuid.c getgid.c \
 	getegid.c alarm.c setuid.c setgid.c getpwent.c getgrent.c vfork.c mount.c umount.c \
 	nanosleep.c sigaction.c uname.c sigprocmask.c setpgrp.c getpgrp.c sethostname.c kctl.c \
-	times.c time.c stime.c
+	times.c time.c stime.c symlink.c accept.c bind.c connect.c listen.c recv.c recvfrom.c \
+	send.c sendto.c shutdown.c socket.c
 
 ADD_OBJS = \
 	$(IDYLLAOS_MACH_LIB)
@@ -790,6 +798,72 @@ lib_a-stime.o: stime.c
 
 lib_a-stime.obj: stime.c
 	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-stime.obj `if test -f 'stime.c'; then $(CYGPATH_W) 'stime.c'; else $(CYGPATH_W) '$(srcdir)/stime.c'; fi`
+
+lib_a-symlink.o: symlink.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-symlink.o `test -f 'symlink.c' || echo '$(srcdir)/'`symlink.c
+
+lib_a-symlink.obj: symlink.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-symlink.obj `if test -f 'symlink.c'; then $(CYGPATH_W) 'symlink.c'; else $(CYGPATH_W) '$(srcdir)/symlink.c'; fi`
+
+lib_a-accept.o: accept.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-accept.o `test -f 'accept.c' || echo '$(srcdir)/'`accept.c
+
+lib_a-accept.obj: accept.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-accept.obj `if test -f 'accept.c'; then $(CYGPATH_W) 'accept.c'; else $(CYGPATH_W) '$(srcdir)/accept.c'; fi`
+
+lib_a-bind.o: bind.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-bind.o `test -f 'bind.c' || echo '$(srcdir)/'`bind.c
+
+lib_a-bind.obj: bind.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-bind.obj `if test -f 'bind.c'; then $(CYGPATH_W) 'bind.c'; else $(CYGPATH_W) '$(srcdir)/bind.c'; fi`
+
+lib_a-connect.o: connect.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-connect.o `test -f 'connect.c' || echo '$(srcdir)/'`connect.c
+
+lib_a-connect.obj: connect.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-connect.obj `if test -f 'connect.c'; then $(CYGPATH_W) 'connect.c'; else $(CYGPATH_W) '$(srcdir)/connect.c'; fi`
+
+lib_a-listen.o: listen.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-listen.o `test -f 'listen.c' || echo '$(srcdir)/'`listen.c
+
+lib_a-listen.obj: listen.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-listen.obj `if test -f 'listen.c'; then $(CYGPATH_W) 'listen.c'; else $(CYGPATH_W) '$(srcdir)/listen.c'; fi`
+
+lib_a-recv.o: recv.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-recv.o `test -f 'recv.c' || echo '$(srcdir)/'`recv.c
+
+lib_a-recv.obj: recv.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-recv.obj `if test -f 'recv.c'; then $(CYGPATH_W) 'recv.c'; else $(CYGPATH_W) '$(srcdir)/recv.c'; fi`
+
+lib_a-recvfrom.o: recvfrom.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-recvfrom.o `test -f 'recvfrom.c' || echo '$(srcdir)/'`recvfrom.c
+
+lib_a-recvfrom.obj: recvfrom.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-recvfrom.obj `if test -f 'recvfrom.c'; then $(CYGPATH_W) 'recvfrom.c'; else $(CYGPATH_W) '$(srcdir)/recvfrom.c'; fi`
+
+lib_a-send.o: send.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-send.o `test -f 'send.c' || echo '$(srcdir)/'`send.c
+
+lib_a-send.obj: send.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-send.obj `if test -f 'send.c'; then $(CYGPATH_W) 'send.c'; else $(CYGPATH_W) '$(srcdir)/send.c'; fi`
+
+lib_a-sendto.o: sendto.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-sendto.o `test -f 'sendto.c' || echo '$(srcdir)/'`sendto.c
+
+lib_a-sendto.obj: sendto.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-sendto.obj `if test -f 'sendto.c'; then $(CYGPATH_W) 'sendto.c'; else $(CYGPATH_W) '$(srcdir)/sendto.c'; fi`
+
+lib_a-shutdown.o: shutdown.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-shutdown.o `test -f 'shutdown.c' || echo '$(srcdir)/'`shutdown.c
+
+lib_a-shutdown.obj: shutdown.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-shutdown.obj `if test -f 'shutdown.c'; then $(CYGPATH_W) 'shutdown.c'; else $(CYGPATH_W) '$(srcdir)/shutdown.c'; fi`
+
+lib_a-socket.o: socket.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-socket.o `test -f 'socket.c' || echo '$(srcdir)/'`socket.c
+
+lib_a-socket.obj: socket.c
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(lib_a_CFLAGS) $(CFLAGS) -c -o lib_a-socket.obj `if test -f 'socket.c'; then $(CYGPATH_W) 'socket.c'; else $(CYGPATH_W) '$(srcdir)/socket.c'; fi`
 
 mostlyclean-libtool:
 	-rm -f *.lo

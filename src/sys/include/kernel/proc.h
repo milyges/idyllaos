@@ -112,7 +112,8 @@ struct thread
 {
 	list_t list; /* Lista wątków (dla schedulera) */
 	list_t t_list; /* Lista wątków w danym procesie */
-
+	list_t s_list; /* Lista wątków uśpionych (na określony czas) */
+	
 	tid_t tid; /* ID wątku */
 
 	struct proc * proc; /* Proces macierzysty */

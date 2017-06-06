@@ -119,6 +119,22 @@ void * memsetw(void * dst, uint16_t c, int len)
 	return dst;
 }
 
+int memcmp(void * p1, void * p2, int len)
+{
+	char * c1 = p1;
+	char * c2 = p2;
+	int i = 0;
+	
+	while((i < len) && (*c1 == *c2))
+	{
+		c1++;
+		c2++;
+		i++;
+	}
+	
+	return (i == len) ? 0 : (int)(*c1 - *c2);
+}
+
 int strcmp(const char * s1, const char * s2)
 {
 	while((*s1) && (*s1 == *s2))

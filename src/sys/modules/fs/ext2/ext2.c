@@ -36,7 +36,8 @@ static int ext2_open(struct vnode * vnode)
 
 	/* Wczytujemy i-node */
 	err = inode_read(vnode);
-
+	vnode->dev = vnode->mp->device;
+	
 	if (err != 0)
 	{
 		kfree(vnode->data);
@@ -72,7 +73,7 @@ static ino_t ext2_lookup(struct vnode * vnode, char * name)
 
 	/* Ładujemy cały katalog do pamięci */
 	buf = kalloc(vnode->block_size * blocks);
-	err = inode_read_content(vnode, buf, blocks, 0);
+	err = inode_rw_content(vnode, buf, blocks, 0, EXT2_RW_READ);
 	if (err < 0)
 		goto end;
 
@@ -126,7 +127,7 @@ static ssize_t ext2_read(struct vnode * vnode, void * buf, size_t len, loff_t of
 		/* Jeśli nie, alokujemy bufor */
 		tmpbuf = kalloc(vnode->block_size);
 		
-		err = inode_read_content(vnode, tmpbuf, 1, start);
+		err = inode_rw_content(vnode, tmpbuf, 1, start, EXT2_RW_READ);
 		if (err < 0)
 			goto end;
 		
@@ -138,9 +139,9 @@ static ssize_t ext2_read(struct vnode * vnode, void * buf, size_t len, loff_t of
 		start++;
 	}
 
-	if (left > vnode->block_size)
+	if (left >= vnode->block_size)
 	{
-		err = inode_read_content(vnode, buf, left / vnode->block_size, start);
+		err = inode_rw_content(vnode, buf, left / vnode->block_size, start, EXT2_RW_READ);
 		if (err < 0)
 			goto end;
 		
@@ -155,7 +156,7 @@ static ssize_t ext2_read(struct vnode * vnode, void * buf, size_t len, loff_t of
 		if (!tmpbuf)
 			tmpbuf = kalloc(vnode->block_size);
 		
-		err = inode_read_content(vnode, tmpbuf, 1, start);
+		err = inode_rw_content(vnode, tmpbuf, 1, start, EXT2_RW_READ);
 		if (err < 0)
 			goto end;
 		
@@ -220,18 +221,16 @@ static ssize_t ext2_write(struct vnode * vnode, void * buf, size_t len, loff_t o
 	{
 		/* Jeśli nie, alokujemy bufor */
 		tmpbuf = kalloc(vnode->block_size);
-		memset(tmpbuf, 0, vnode->block_size);
 		
-		err = inode_read_content(vnode, tmpbuf, 1, start);
-		if (err < 0)
-			goto end;
+		if (inode_rw_content(vnode, tmpbuf, 1, start, EXT2_RW_READ) <= 0)
+			memset(tmpbuf, 0, vnode->block_size);
 		
 		/* Kopiujemy dane z bufora zródłowego do tymczasowego */
 		bytes = MIN(vnode->block_size - (offset % vnode->block_size), len);
 		memcpy((void *)(tmpbuf + (offset % vnode->block_size)), buf, bytes);
 		
 		/* Zapisujemy zmiany */
-		err = inode_write_content(vnode, tmpbuf, 1, start);
+		err = inode_rw_content(vnode, tmpbuf, 1, start, EXT2_RW_WRITE);
 		if (err < 0)
 			goto end;
 		
@@ -240,9 +239,9 @@ static ssize_t ext2_write(struct vnode * vnode, void * buf, size_t len, loff_t o
 		start++;
 	}
 
-	if (left > vnode->block_size)
+	if (left >= vnode->block_size)
 	{
-		err = inode_write_content(vnode, buf, left / vnode->block_size, start);
+		err = inode_rw_content(vnode, buf, left / vnode->block_size, start, EXT2_RW_WRITE);
 		if (err < 0)
 			goto end;
 		buf += ROUND_DOWN(left, vnode->block_size);
@@ -255,18 +254,19 @@ static ssize_t ext2_write(struct vnode * vnode, void * buf, size_t len, loff_t o
 		if (!tmpbuf)
 			tmpbuf = kalloc(vnode->block_size);
 		
-		err = inode_read_content(vnode, tmpbuf, 1, start);
-		if (err < 0)
-			goto end;
+		if (inode_rw_content(vnode, tmpbuf, 1, start, EXT2_RW_READ) <= 0)
+			memset(tmpbuf, 0, vnode->block_size);
 		
 		memcpy(tmpbuf, buf, left);
-		err = inode_write_content(vnode, tmpbuf, 1, start);
+		err = inode_rw_content(vnode, tmpbuf, 1, start, EXT2_RW_WRITE);
 		if (err < 0)
 			goto end;
 		left = 0;
 	}
 	
 	err = len - left;
+	
+	//kprintf(" len = %d, left = %d\n", len, left);
 	
 	vnode->size = MAX(vnode->size, offset + err);
 	inode_write(vnode);
@@ -290,7 +290,7 @@ int ext2_getdents(struct vnode * vnode, struct dirent * dirp, size_t len, loff_t
 
 
 	buf = kalloc(blocks * data->blk_size);
-	err = inode_read_content(vnode, buf, blocks, 0);
+	err = inode_rw_content(vnode, buf, blocks, 0, EXT2_RW_READ);
 	if (err < 0)
 		goto end;
 
@@ -323,7 +323,7 @@ end:
 }
 
 /* Funkcja zapisuje v-node na dysk */
-int ext2_sync(struct vnode * vnode)
+int ext2_flush(struct vnode * vnode)
 {
 	return inode_write(vnode);
 }
@@ -363,7 +363,7 @@ end:
 
 static int ext2_unlink(struct vnode * vnode, char * name)
 {
-	return inode_unlink(vnode, name);	
+	return -ENOSYS; //inode_unlink(vnode, name);	
 }
 
 static int ext2_mount(struct mountpoint * mp, char * flags)
@@ -488,7 +488,7 @@ static struct vnode_ops _ext2_vnode_ops =
 	.write = &ext2_write,
 	.getdents = &ext2_getdents,
 	.creat = &ext2_creat,
-	.sync = &ext2_sync,
+	.flush = &ext2_flush,
 	.unlink = &ext2_unlink
 };
 

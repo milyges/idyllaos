@@ -158,7 +158,7 @@ static inline void delay(uint32_t msec)
 }
 
 int cpus_get_live(void);
-void execve_user(void * entry, void * stack);
+void cpus_set_installed(int num);
 
 #endif /* __ASM__ */
 

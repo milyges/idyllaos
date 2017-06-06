@@ -1,6 +1,6 @@
 /*
  * Idylla Operating System
- * Copyright (C) 2009-2010 Idylla Operating System Team
+ * Copyright (C) 2009-2012 Idylla Operating System Team
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -155,7 +155,7 @@ int inode_link(struct vnode * vnode, char * name, ino_t ino_num, struct ext2_ino
 	//kprintf("ext2: inode_link(): insert %s into %d (name_len: %d, rec_len: %d)\n", name, vnode->ino, name_len, rec_len);
 	
 	buf = kalloc(blocks * data->blk_size);
-	err = inode_read_content(vnode, buf, blocks, 0);
+	err = inode_rw_content(vnode, buf, blocks, 0, EXT2_RW_READ);
 	if (err < 0)
 		goto end;
 	
@@ -193,7 +193,7 @@ int inode_link(struct vnode * vnode, char * name, ino_t ino_num, struct ext2_ino
 		ent->file_type = type;
 		strcpy((char *)ent->name, name);
 		
-		err = inode_write_content(vnode, buf, blocks, 0);
+		err = inode_rw_content(vnode, buf, blocks, 0, EXT2_RW_WRITE);
 		if (err < 0)
 			goto end;
 		
@@ -232,7 +232,7 @@ int inode_unlink(struct vnode * vnode, char * name)
 
 	/* Ładujemy cały katalog do pamięci */
 	buf = kalloc(vnode->block_size * blocks);
-	err = inode_read_content(vnode, buf, blocks, 0);
+	err = inode_rw_content(vnode, buf, blocks, 0, EXT2_RW_READ);
 	if (err < 0)
 		goto end;
 
@@ -253,7 +253,7 @@ int inode_unlink(struct vnode * vnode, char * name)
 			else
 				entry->inode = 0;
 			
-			err = inode_write_content(vnode, buf, blocks, 0);
+			err = inode_rw_content(vnode, buf, blocks, 0, EXT2_RW_WRITE);
 			if (err > 0)
 				err = 0;
 
@@ -271,27 +271,85 @@ end:
 	return err;
 }
 
-int32_t inode_read_content(struct vnode * vnode, void * buf, uint32_t blocks, uint32_t start)
+int inode_do_alloc_block(struct vnode * vnode, uint32_t * block, int zeroblock)
 {
-	int idx, err, tmp;
+	int err;
+	struct ext2_data * data = vnode->mp->data;
+	struct ext2_inode * inode = vnode->data;
+	static void * zero = NULL;
+	
+	err = block_alloc(data, block, EXT2_GET_INODE_GROUP(data, vnode->ino));
+	if (err != 0)
+		return err;
+	
+	inode->i_blocks++;
+	
+	if (zeroblock)
+	{
+		if (!zero)
+		{
+			zero = kalloc(vnode->block_size);
+			memset(zero, 0x00, vnode->block_size);
+		}
+		
+		err = bdev_write(vnode->mp->device, zero, data->spb, EXT2_GET_SECTOR_NUM(data, *block));		
+		if (err < 0)
+		{
+			TODO("free block");
+			return err;
+		}
+	}
+	
+	return 0;
+}
+
+
+int32_t inode_rw_content(struct vnode * vnode, void * buf, uint32_t blocks, uint32_t start, int rw)
+{
+	int idx, err, tmp, bpi; /* Blocks per indirect */
 	void * ptr;
 	uint32_t * indirect_buf;
 	uint32_t * indirect_buf2;
-	int indirect_idx, i;
+	int indirect_idx, i = 0;
 
 	struct ext2_data * data = vnode->mp->data;
 	struct ext2_inode * inode = vnode->data;
 
 	ptr = buf;
-
+	
+	if (rw == EXT2_RW_WRITE)
+	{
+		for(idx = 0; (idx < start) && (idx < 12); idx++)
+		{
+			if (inode->i_block[idx] < 2)
+			{
+				err = inode_do_alloc_block(vnode, &inode->i_block[idx], 1);
+				if (err != 0)
+					return err;
+			}
+		}
+	}
+	
 	/* Odczytujemy do 12 bezpośrednich bloków */
 	for(idx = start; (blocks > 0) && (idx < 12); idx++)
 	{
 		/* Koniec zawartosci? */
 		if (inode->i_block[idx] < 2)
-			return idx;
-
-		err = bdev_read(data->mp->device, ptr, data->spb, EXT2_GET_SECTOR_NUM(data, inode->i_block[idx]));
+		{
+			if (rw == EXT2_RW_READ)
+				break;
+			
+			/* Alokujemy blok */
+			err = inode_do_alloc_block(vnode, &inode->i_block[idx], 0);
+			if (err != 0)
+				return err;
+		}
+		
+		if (rw == EXT2_RW_READ)
+			err = bdev_read(data->mp->device, ptr, data->spb, EXT2_GET_SECTOR_NUM(data, inode->i_block[idx]));
+		else
+			err = bdev_write(data->mp->device, ptr, data->spb, EXT2_GET_SECTOR_NUM(data, inode->i_block[idx]));
+		
 		if (err != data->spb)
 			return -EIO;
 
@@ -299,7 +357,7 @@ int32_t inode_read_content(struct vnode * vnode, void * buf, uint32_t blocks, ui
 		blocks--;
 	}
 
-	tmp = data->blk_size / sizeof(uint32_t);
+	bpi = data->blk_size / sizeof(uint32_t);
 
 	/* Czy są jakieś bloki niebezposrednie */
 	if (blocks > 0)
@@ -308,24 +366,76 @@ int32_t inode_read_content(struct vnode * vnode, void * buf, uint32_t blocks, ui
 		indirect_buf = kalloc(data->blk_size);
 		indirect_idx = idx - 12;
 
-		/* Sprawdzamy czy mamy jakieś bloki do przeczytania na 1 poziomie */
-		if (indirect_idx < tmp)
+		/* Sprawdzamy czy mamy jakieś bloki do przeczytania/zapisania na 1 poziomie */
+		if ((indirect_idx < bpi) || (rw == EXT2_RW_WRITE))
 		{
-			err = bdev_read(data->mp->device, indirect_buf, data->spb, EXT2_GET_SECTOR_NUM(data, inode->i_block[12]));
-			if (err < 0)
+			if (inode->i_block[12] < 2)
 			{
-				kfree(indirect_buf);
-				return -EIO;
+				if (rw == EXT2_RW_READ)
+				{
+					kfree(indirect_buf);
+					return (ptr - buf) / vnode->block_size;
+				}
+				
+				/* Alokujemy blok na indeks */
+				err = inode_do_alloc_block(vnode, &inode->i_block[12], 0);
+				if (err != 0)
+				{
+					kfree(indirect_buf);
+					return err;
+				}
+				
+				memset(indirect_buf, 0x00, data->blk_size);
+			}
+			else
+			{
+				/* Ładujemy indeks */
+				err = bdev_read(data->mp->device, indirect_buf, data->spb, EXT2_GET_SECTOR_NUM(data, inode->i_block[12]));
+				if (err < 0)
+				{
+					kfree(indirect_buf);
+					return -EIO;
+				}
 			}
 
-			/* Odczytujemy bloki na 1 poziomie */
-			for(;(indirect_idx < tmp) && (blocks > 0); indirect_idx++)
+			if (rw == EXT2_RW_WRITE)
+			{
+				for(i = 0; (i < indirect_idx) && (i < bpi); i++)
+				{
+					if (indirect_buf[i] < 2)
+					{
+						err = inode_do_alloc_block(vnode, &indirect_buf[i], 1);
+						if (err != 0)
+						{
+							kfree(indirect_buf);
+							return err;
+						}
+					}
+				}
+			}
+			
+			/* Odczytujemy/zapisujemy bloki na 1 poziomie */
+			for(;(indirect_idx < bpi) && (blocks > 0); indirect_idx++)
 			{
 				/* Koniec zawartosci? */
 				if (indirect_buf[indirect_idx] < 2)
-					break;
-
-				err = bdev_read(data->mp->device, ptr, data->spb, EXT2_GET_SECTOR_NUM(data, indirect_buf[indirect_idx]));
+				{
+					if (rw == EXT2_RW_READ)
+						break;
+					
+					err = inode_do_alloc_block(vnode, &indirect_buf[i], 0);
+					if (err != 0)
+					{
+						kfree(indirect_buf);
+						return err;
+					}
+				}
+				
+				if (rw == EXT2_RW_READ)
+					err = bdev_read(data->mp->device, ptr, data->spb, EXT2_GET_SECTOR_NUM(data, indirect_buf[indirect_idx]));
+				else
+					err = bdev_write(data->mp->device, ptr, data->spb, EXT2_GET_SECTOR_NUM(data, indirect_buf[indirect_idx]));
+				
 				if (err != data->spb)
 				{
 					kfree(indirect_buf);
@@ -335,42 +445,172 @@ int32_t inode_read_content(struct vnode * vnode, void * buf, uint32_t blocks, ui
 				ptr += data->blk_size;
 				blocks--;
 			}
+			
+			if (rw == EXT2_RW_WRITE)
+			{
+				err = bdev_write(data->mp->device, indirect_buf, data->spb, EXT2_GET_SECTOR_NUM(data, inode->i_block[12]));
+				if (err < 0)
+				{
+					kfree(indirect_buf);
+					return -EIO;
+				}
+			}
 		}
 
-		indirect_idx -= tmp;
-		if ((indirect_idx >= 0) && (indirect_idx < tmp * tmp))
+		/* Bloki na poziomie 2 */
+		indirect_idx -= bpi; /* NOTE: indirect_idx jest inkrementowany, czyli jeśli są jakieś bloki to jest on równy conajmniej bpi */
+		if ((indirect_idx >= 0) && (indirect_idx < bpi * bpi))
 		{
 			indirect_buf2 = kalloc(data->blk_size);
-			err = bdev_read(data->mp->device, indirect_buf, data->spb, EXT2_GET_SECTOR_NUM(data, inode->i_block[13]));
-			if (err < 0)
+			
+			if (inode->i_block[13] < 2)
 			{
-				kfree(indirect_buf2);
-				kfree(indirect_buf);
-				return -EIO;
+				if (rw == EXT2_RW_READ)
+				{
+					kfree(indirect_buf2);
+					kfree(indirect_buf);
+					return (ptr - buf) / vnode->block_size;
+				}
+				
+				/* Alokujemy blok na indeks 1-rzedu*/
+				err = inode_do_alloc_block(vnode, &inode->i_block[13], 0);
+				if (err != 0)
+				{
+					kfree(indirect_buf2);
+					kfree(indirect_buf);
+					return err;
+				}
+				
+				memset(indirect_buf, 0x00, data->blk_size);
 			}
-
-
-			while ((indirect_idx < tmp * tmp) && (blocks > 0))
+			else
 			{
-				err = bdev_read(data->mp->device, indirect_buf2, data->spb, EXT2_GET_SECTOR_NUM(data, indirect_buf[indirect_idx / tmp]));
-				if (err != data->spb)
+				err = bdev_read(data->mp->device, indirect_buf, data->spb, EXT2_GET_SECTOR_NUM(data, inode->i_block[13]));
+				if (err < 0)
 				{
 					kfree(indirect_buf2);
 					kfree(indirect_buf);
 					return -EIO;
 				}
-
-				for(i = indirect_idx % tmp; (i < tmp) && (blocks > 0); i++)
-				{
-					err = bdev_read(data->mp->device, ptr, data->spb, EXT2_GET_SECTOR_NUM(data, indirect_buf2[i]));
-					ptr += data->blk_size;
-					blocks--;
-					indirect_idx++;
-				}
-
 			}
 
-			if ((indirect_idx < tmp * tmp * tmp) && (blocks > 0))
+			if (rw == EXT2_RW_READ)
+				idx = indirect_idx;
+			else
+				idx = 0;
+			
+			while ((idx < bpi * bpi) && (blocks > 0))
+			{
+				tmp = idx / bpi;
+				if (indirect_buf[tmp] < 2)
+				{
+					if (rw == EXT2_RW_READ)
+					{
+						kfree(indirect_buf2);
+						kfree(indirect_buf);
+						return (ptr - buf) / vnode->block_size;
+					}
+					
+					/* Alokujemy blok na indeks 2-rzedu */
+					err = inode_do_alloc_block(vnode, &indirect_buf[tmp], 0);
+					if (err != 0)
+					{
+						kfree(indirect_buf2);
+						kfree(indirect_buf);
+						return err;
+					}
+					
+					memset(indirect_buf2, 0x00, data->blk_size);
+				}
+				else
+				{
+					err = bdev_read(data->mp->device, indirect_buf2, data->spb, EXT2_GET_SECTOR_NUM(data, indirect_buf[tmp]));
+					if (err != data->spb)
+					{
+						kfree(indirect_buf2);
+						kfree(indirect_buf);
+						return -EIO;
+					}
+				}
+
+				
+				for(i = idx % bpi; (i < bpi) && (idx < indirect_idx); i++)
+				{
+					if (indirect_buf2[i] < 2)
+					{
+						err = inode_do_alloc_block(vnode, &indirect_buf2[i], 1);
+						if (err != 0)
+						{
+							kfree(indirect_buf2);
+							kfree(indirect_buf);
+							return err;
+						}
+					}
+					idx++;
+				}
+				
+				for(; (i < bpi) && (blocks > 0); i++)
+				{
+					if (indirect_buf2[i] < 2)
+					{
+						if (rw == EXT2_RW_READ)
+						{
+							kfree(indirect_buf2);
+							kfree(indirect_buf);
+							return (ptr - buf) / vnode->block_size;
+						}
+					
+						/* Alokujemy blok */
+						err = inode_do_alloc_block(vnode, &indirect_buf2[i], 0);
+						if (err != 0)
+						{
+							kfree(indirect_buf2);
+							kfree(indirect_buf);
+							return err;
+						}
+					}
+				
+					if (rw == EXT2_RW_READ)
+						err = bdev_read(data->mp->device, ptr, data->spb, EXT2_GET_SECTOR_NUM(data, indirect_buf2[i]));
+					else
+						err = bdev_write(data->mp->device, ptr, data->spb, EXT2_GET_SECTOR_NUM(data, indirect_buf2[i]));
+				
+					if (err < 0)
+					{
+						kfree(indirect_buf2);
+						kfree(indirect_buf);
+						return -EIO;
+					}
+				
+					ptr += data->blk_size;
+					blocks--;
+					idx++;
+				}
+				
+				if (rw == EXT2_RW_WRITE)
+				{
+					err = bdev_write(data->mp->device, indirect_buf2, data->spb, EXT2_GET_SECTOR_NUM(data, indirect_buf[tmp]));
+					if (err != data->spb)
+					{
+						kfree(indirect_buf2);
+						kfree(indirect_buf);
+						return -EIO;
+					}
+				}
+			}
+
+			if (rw == EXT2_RW_WRITE)
+			{
+				err = bdev_write(data->mp->device, indirect_buf, data->spb, EXT2_GET_SECTOR_NUM(data, inode->i_block[13]));
+				if (err < 0)
+				{
+					kfree(indirect_buf2);
+					kfree(indirect_buf);
+					return -EIO;
+				}
+			}
+			
+			if ((indirect_idx < bpi * bpi * bpi) && (blocks > 0))
 			{
 				TODO("triple indirect blocks!");
 				while(1);
@@ -380,58 +620,6 @@ int32_t inode_read_content(struct vnode * vnode, void * buf, uint32_t blocks, ui
 
 		kfree(indirect_buf);
 
-	}
-
-	return (ptr - buf) / vnode->block_size;
-}
-
-/* Funkcja zapisuje zawartość i-node, sama alokując potrzebne bloki */
-int32_t inode_write_content(struct vnode * vnode, void * buf, uint32_t blocks, uint32_t start)
-{
-	int idx, err, tmp;
-	void * ptr;
-	//uint32_t * indirect_buf;
-	//uint32_t * indirect_buf2;
-
-	struct ext2_data * data = vnode->mp->data;
-	struct ext2_inode * inode = vnode->data;
-
-	ptr = buf;
-
-	/* Zapisujemy do 12 bezpośrednich bloków */
-	for(idx = start; (blocks > 0) && (idx < 12); idx++)
-	{
-		/* Blok jest pusty? */
-		if (inode->i_block[idx] < 2)
-		{
-			/* Próbujemy zaalokować blok w tej samej grupie */
-			err = block_alloc(data, &inode->i_block[idx], EXT2_GET_INODE_GROUP(data, vnode->ino));
-			if (err == -ENOSPC)
-			{
-				err = block_alloc(data, &inode->i_block[idx], -1);
-			}
-			
-			if (err < 0)
-				return err;
-			
-			inode->i_blocks++;
-		}
-
-		err = bdev_write(data->mp->device, ptr, data->spb, EXT2_GET_SECTOR_NUM(data, inode->i_block[idx]));
-		if (err != data->spb)
-			return -EIO;
-
-		ptr += data->blk_size;
-		blocks--;
-	}
-
-	tmp = data->blk_size / sizeof(uint32_t);
-	
-	/* Czy są jakieś bloki niebezposrednie */
-	if (blocks > 0)
-	{
-		TODO("write indirect blocks");
-		return -ENOSYS;
 	}
 	
 	return (ptr - buf) / vnode->block_size;

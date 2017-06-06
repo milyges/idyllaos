@@ -73,7 +73,7 @@ int sys_execve(char * path, char * argv[], char * envp[])
 		return -ENOMEM;
 	}
 
-	err = elf_execve(fd, vmspace, &entry);
+	err = elf_execve(fd, vmspace, &entry);	
 	if (err != 0)
 	{
 		vm_space_destroy(vmspace);

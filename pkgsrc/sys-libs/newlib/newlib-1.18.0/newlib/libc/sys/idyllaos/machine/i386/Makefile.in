@@ -507,7 +507,7 @@ objectlist.awk.in: $(noinst_LTLIBRARIES)
 	  echo $$i `pwd`/$$i >> objectlist.awk.in ; \
 	done
 
-all-local: crt0.o
+all-local: crt0.o crti.o crtn.o
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

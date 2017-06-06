@@ -128,10 +128,10 @@ struct sma_block * sma_alloc(struct sma_area * area, addr_t addr, size_t size, u
 	struct sma_block * newblock;
 	struct sma_block * newblock2;
 	
-	if (!addr)
-		goto nofixed;
-
 	mutex_lock(&area->mutex);
+	
+	if (!addr)
+		goto nofixed;	
 
 	/* Szukamy wolnego bloku pod podanym adresem */
 	LIST_FOREACH(&area->free_list, block)

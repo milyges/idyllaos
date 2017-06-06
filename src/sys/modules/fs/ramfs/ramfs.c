@@ -175,7 +175,7 @@ static ino_t ramfs_root(struct mountpoint * mp)
 	return RAMFS_ROOT_INODE;
 }
 
-static int ramfs_sync(struct vnode * vnode)
+static int ramfs_flush(struct vnode * vnode)
 {
 	struct ramfs_inode * inode;
 
@@ -247,7 +247,7 @@ static int ramfs_close(struct vnode * vnode)
 
 	inode = vnode->data;
 
-	ramfs_sync(vnode);
+	ramfs_flush(vnode);
 
 	if (!inode->nlink)
 	{
@@ -500,7 +500,7 @@ static struct vnode_ops _ramfs_vnode_ops =
 	.write = &ramfs_write,
 	.mkdir = &ramfs_mkdir,
 	.unlink = &ramfs_unlink,
-	.sync = &ramfs_sync
+	.flush = &ramfs_flush
 };
 
 static struct filesystem_ops _ramfs_fs_ops =

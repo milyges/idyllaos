@@ -25,7 +25,7 @@
 
 int fcntl(int fd, int cmd, ...)
 {
-	int ret;
+	int ret; 
 	void * arg;
 	va_list ap;
 
